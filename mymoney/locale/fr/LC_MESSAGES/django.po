@@ -1,0 +1,275 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2015-11-06 19:54+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: api/bankaccounts/models.py:19 api/banktransactions/models.py:92
+msgid "Label"
+msgstr "Libellé"
+
+#: api/bankaccounts/models.py:24
+msgid "Balance"
+msgstr "Solde"
+
+#: api/bankaccounts/models.py:30
+msgid "Initial balance"
+msgstr "Solde initial"
+
+#: api/bankaccounts/models.py:31
+msgid "Initial balance will automatically update the balance."
+msgstr "Le solde initial va automatiquement mettre à jour le solde."
+
+#: api/bankaccounts/models.py:36 api/banktransactions/models.py:105
+msgid "Currency"
+msgstr "Devise"
+
+#: api/bankaccounts/models.py:41
+msgid "Owners"
+msgstr "Propriétaires"
+
+#: api/banktransactionanalytics/serializers.py:22
+msgid "Sum"
+msgstr "Somme"
+
+#: api/banktransactionanalytics/serializers.py:23
+#: api/banktransactionanalytics/serializers.py:27
+msgid "Expenses"
+msgstr "Dépenses"
+
+#: api/banktransactionanalytics/serializers.py:24
+#: api/banktransactionanalytics/serializers.py:28
+msgid "Income"
+msgstr "Revenus"
+
+#: api/banktransactionanalytics/serializers.py:26
+msgid "Single"
+msgstr "Unique"
+
+#: api/banktransactionanalytics/serializers.py:99
+msgid "Week"
+msgstr "Hebdomadaire"
+
+#: api/banktransactionanalytics/serializers.py:100
+msgid "Month"
+msgstr "Mensuel"
+
+#: api/banktransactions/models.py:73
+msgid "Active"
+msgstr "Actif"
+
+#: api/banktransactions/models.py:74
+msgid "Ignored"
+msgstr "Ignoré"
+
+#: api/banktransactions/models.py:75
+msgid "Inactive"
+msgstr "Inactif"
+
+#: api/banktransactions/models.py:85
+msgid "Credit card"
+msgstr "Carte de crédit"
+
+#: api/banktransactions/models.py:86
+msgid "Cash"
+msgstr "Espèce"
+
+#: api/banktransactions/models.py:87
+msgid "Transfer"
+msgstr "Virement"
+
+#: api/banktransactions/models.py:88
+msgid "Transfer internal"
+msgstr "Virement interne"
+
+#: api/banktransactions/models.py:89
+msgid "Check"
+msgstr "Chèque"
+
+#: api/banktransactions/models.py:97
+msgid "Date"
+msgstr "Date"
+
+#: api/banktransactions/models.py:101
+msgid "Amount"
+msgstr "Montant"
+
+#: api/banktransactions/models.py:112
+msgid "Status"
+msgstr "Statut"
+
+#: api/banktransactions/models.py:113
+msgid ""
+"Depending on its value, determine whether it could alter the bank account "
+"balance or being used by statistics."
+msgstr ""
+"En fonction de la valeur, indique si cela peut modifier le solde du compte "
+"bancaire ou être pris en compte pour les statistiques."
+
+#: api/banktransactions/models.py:119
+msgid "Reconciled"
+msgstr "Pointé"
+
+#: api/banktransactions/models.py:120
+msgid "Whether the bank transaction has been applied on the real bank account."
+msgstr ""
+"Le statut de la transaction bancaire peut être utilisé  pour déterminer si "
+"le solde du compte bancaire doit être modifié."
+
+#: api/banktransactions/models.py:127
+msgid "Payment method"
+msgstr "Méthode de paiement"
+
+#: api/banktransactions/models.py:129
+msgid "Memo"
+msgstr "Mémo"
+
+#: api/banktransactions/models.py:135
+msgid "Tag"
+msgstr "Étiquettes"
+
+#: api/banktransactions/validators.py:27
+msgid "The bulk limit of {max} is exceed."
+msgstr "La limit de masse de {max} a été excédée."
+
+#: api/banktransactions/validators.py:38
+msgid "Some bank transaction are invalid."
+msgstr "Les transactions bancaires pointées ont été annulées."
+
+#: api/banktransactionschedulers/models.py:83
+msgid "Monthly"
+msgstr "Mensuel"
+
+#: api/banktransactionschedulers/models.py:84
+msgid "Weekly"
+msgstr "Hebdomadaire"
+
+#: api/banktransactionschedulers/models.py:91
+msgid "Waiting"
+msgstr "En attente"
+
+#: api/banktransactionschedulers/models.py:92
+msgid "Finished"
+msgstr "Fini"
+
+#: api/banktransactionschedulers/models.py:93
+msgid "Failed"
+msgstr "Échoué"
+
+#: api/banktransactionschedulers/models.py:100
+msgid "Type"
+msgstr "Type"
+
+#: api/banktransactionschedulers/models.py:101
+msgid "The type of recurrence to be applied."
+msgstr "Le type de récurrence a appliquer."
+
+#: api/banktransactionschedulers/models.py:106
+msgid "Recurrence"
+msgstr "Récurrence"
+
+#: api/banktransactionschedulers/models.py:107
+msgid "How many time the bank transaction should be cloned."
+msgstr "Combien de fois la transaction bancaire doit être dupliquée."
+
+#: api/banktransactionschedulers/models.py:112
+msgid "Last time the scheduled bank transaction has been cloned."
+msgstr "La dernière fois que la transaction bancaire a été dupliquée."
+
+#: api/banktransactionschedulers/models.py:120
+msgid "State of the scheduled bank transaction."
+msgstr "État de la transaction bancaire."
+
+#: api/banktransactiontags/models.py:43
+msgid "Name"
+msgstr "Nom"
+
+#: api/banktransactiontags/validators.py:30
+msgid "You are not owner of the bank transaction tag."
+msgstr "État de la transaction bancaire."
+
+#: api/banktransactiontags/validators.py:48
+msgid "You are not owner of all bank transaction tags."
+msgstr "Vous n'êtes pas propriétaire de toutes les étiquettes bancaires."
+
+#: core/management/commands/demo.py:76
+msgid "Current account"
+msgstr "Compte courant"
+
+#: core/management/commands/demo.py:83 core/management/commands/demo.py:93
+msgid "Rent"
+msgstr "Loyer"
+
+#: core/management/commands/demo.py:84
+msgid "Shopping"
+msgstr "Course"
+
+#: core/management/commands/demo.py:85
+msgid "Car"
+msgstr "Voiture"
+
+#: core/management/commands/demo.py:86
+msgid "Tax"
+msgstr "Impôt"
+
+#: core/management/commands/demo.py:87
+msgid "Restaurant"
+msgstr "Restaurant"
+
+#: core/management/commands/demo.py:104
+msgid "Council tax"
+msgstr "Taxe d'habitation"
+
+#: core/management/commands/demo.py:115
+msgid "Wages"
+msgstr "Salaires"
+
+#: core/management/commands/demo.py:126
+msgid "Internal transfer"
+msgstr "Virement interne"
+
+#: core/management/commands/demo.py:138
+msgid "Scratch ticket"
+msgstr "Jeux à gratter"
+
+#: core/management/commands/demo.py:149
+msgid "New tires"
+msgstr "Nouveaux pneus"
+
+#: core/management/commands/demo.py:160
+msgid "Bad stuff"
+msgstr "Mauvais truc"
+
+#: core/management/commands/demo.py:170
+msgid "Refund"
+msgstr "Remboursement"
+
+#: core/management/commands/demo.py:191
+msgid "Something"
+msgstr "Quelque chose"
+
+#: core/serializers.py:26
+msgid "Invalid username or password."
+msgstr "Nom d'utilisateur ou mot de passe invalides."
+
+#: core/serializers.py:29
+msgid "Your account is not active."
+msgstr "Votre compte utilisateur est inactif."
+
+#: core/validators.py:17
+msgid "Min field must be lower or equals to max field."
+msgstr "Le champ minimum doit être inférieur ou égal aux champs maximum."

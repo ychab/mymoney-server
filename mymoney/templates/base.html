@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--<html data-ng-app="mymoneyApp" ng-strict-di data-ng-controller="MainCtrl as main" lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>-->
+<html data-ng-app="mymoney" data-ng-controller="MainCtrl as main" lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+{% load staticfiles %}
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    {% verbatim %}<title data-ng-bind-template="{{main.page.title}}">{% endverbatim %}MyMoney</title>
+    <link href="{% static 'mymoney/bower_components/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet" />
+    <link href="{% static 'mymoney/dist/css/mymoney.min.css' %}" rel="stylesheet" />
+    <meta name="robots" content="NONE,NOARCHIVE" />
+</head>
+
+<body>
+    <div data-ng-include="main.templates.navbar"></div>
+
+    <div class="container" role="main">
+        <section>
+            {% verbatim %}<h1 class="page-header" data-ng-bind-template="{{main.page.title}}">{% endverbatim %}MyMoney</h1>
+            <div class="content-wrapper">
+                <div data-ng-include="main.templates.breadcrumb"></div>
+                <div data-ng-include="main.templates.messages"></div>
+                <div data-ng-view></div>
+            </div>
+        </section>
+    </div>
+
+    <script type="text/javascript">
+        var djangoSettings = {{ django_settings|safe }};
+    </script>
+
+    {% if dist_l10n_src %}
+    <script type="text/javascript" src="{% static dist_l10n_src %}"></script>
+    {% else %}
+    <script type="text/javascript" src="{% static 'mymoney/dist/js/mymoney.min.js' %}"></script>
+    {% endif %}
+
+    <!--<script type="text/javascript" src="{% static 'mymoney/dist/js/mymoney.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/app.module.js' %}"></script>-->
+
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/core.module.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/constants.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/config.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/run.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/services.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/core.js' %}"></script>-->
+
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/user/user.module.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/user/user.js' %}"></script>-->
+    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/user/services.js' %}"></script>-->
+</body>
+</html>

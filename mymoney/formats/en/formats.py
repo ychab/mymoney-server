@@ -1,0 +1,1 @@
+CURRENCY_PATTERN_FORMAT = '¤#,##0.00'
