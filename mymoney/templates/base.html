@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<!--<html data-ng-app="mymoneyApp" ng-strict-di data-ng-controller="MainCtrl as main" lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>-->
-<html data-ng-app="mymoney" data-ng-controller="MainCtrl as main" lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
+<html data-ng-app="mymoneyApp" ng-strict-di data-ng-controller="MainCtrl as main" lang="{{ LANGUAGE_CODE|default:"en-us" }}" {% if LANGUAGE_BIDI %}dir="rtl"{% endif %}>
 {% load staticfiles %}
 <head>
     <meta charset="utf-8">
@@ -30,24 +29,9 @@
         var djangoSettings = {{ django_settings|safe }};
     </script>
 
+    <script type="text/javascript" src="{% static 'mymoney/dist/js/mymoney.js' %}"></script>
     {% if dist_l10n_src %}
     <script type="text/javascript" src="{% static dist_l10n_src %}"></script>
-    {% else %}
-    <script type="text/javascript" src="{% static 'mymoney/dist/js/mymoney.min.js' %}"></script>
     {% endif %}
-
-    <!--<script type="text/javascript" src="{% static 'mymoney/dist/js/mymoney.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/app.module.js' %}"></script>-->
-
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/core.module.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/constants.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/config.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/run.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/services.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/core/core.js' %}"></script>-->
-
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/user/user.module.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/user/user.js' %}"></script>-->
-    <!--<script type="text/javascript" src="{% static 'mymoney/src/js/user/services.js' %}"></script>-->
 </body>
 </html>
