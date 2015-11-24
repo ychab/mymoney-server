@@ -9,8 +9,8 @@
    :alt: Requirements Status
 
 .. image:: https://readthedocs.org/projects/mymoney-server/badge/?version=latest
-   :target: https://readthedocs.org/projects/mymoney-server/?badge=latest
-   :alt: Documentation Status
+    :target: http://mymoney-server.readthedocs.org/en/latest/?badge=latest
+    :alt: Documentation Status
 
 MyMoney server
 ==============
@@ -23,6 +23,6 @@ This is the repository of the MyMoney's backend build with
 Documentation
 -------------
 
-For backend documentation, see http://mymoney-backend.readthedocs.org.
+For server documentation, see http://mymoney-server.readthedocs.org.
 
 For global project documentation, see http://mymoney.readthedocs.org.
