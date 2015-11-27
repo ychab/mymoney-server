@@ -3,7 +3,7 @@ from django.test import TestCase, override_settings
 from rest_framework.settings import api_settings
 
 from ..factories import UserFactory
-from ..serializers import LoginSerializer, UserSerializer
+from ..serializers import LoginSerializer, UserDetailSerializer
 
 
 class LoginSerializerTestCase(TestCase):
@@ -53,11 +53,11 @@ class LoginSerializerTestCase(TestCase):
         self.assertEqual(serializer.validated_data['user'], user)
 
 
-class UserSerializerTestCase(TestCase):
+class UserDetailSerializerTestCase(TestCase):
 
     def test_permissions_none(self):
         user = UserFactory()
-        serializer = UserSerializer(user)
+        serializer = UserDetailSerializer(user)
         self.assertListEqual(serializer.data['permissions'], [])
 
     def test_permissions_some(self):
@@ -67,7 +67,7 @@ class UserSerializerTestCase(TestCase):
             'delete_banktransaction',
         ]
         user = UserFactory(user_permissions=user_permissions)
-        serializer = UserSerializer(user)
+        serializer = UserDetailSerializer(user)
         self.assertListEqual(
             sorted(serializer.data['permissions']),
             user_permissions,
