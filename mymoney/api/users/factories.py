@@ -18,10 +18,11 @@ class UserFactory(factory.DjangoModelFactory):
     def user_permissions(self, create, extracted, **kwargs):
 
         if create and extracted:
-            qs = UserFactory.get_permissions()
-
-            if extracted == 'all':  # pragma: no branch
-                self.user_permissions = qs
+            if extracted == 'all':
+                self.user_permissions = UserFactory.get_permissions()
+            else:
+                self.user_permissions = Permission.objects.filter(
+                    codename__in=extracted)
 
     @classmethod
     def get_permissions(cls):

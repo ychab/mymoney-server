@@ -30,3 +30,10 @@ class UserSerializer(serializers.ModelSerializer):
         model = get_user_model()
         fields = ('id', 'username', 'email')
         read_only_fields = ('username', 'email')
+
+    def to_representation(self, instance):
+        data = super(UserSerializer, self).to_representation(instance)
+        data['permissions'] = [
+            perm.codename for perm in instance.user_permissions.all()
+        ]
+        return data
