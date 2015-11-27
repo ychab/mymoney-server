@@ -2,6 +2,8 @@ from django.test import TestCase, override_settings
 
 from rest_framework.settings import api_settings
 
+from mymoney.api.bankaccounts.factories import BankAccountFactory
+
 from ..factories import UserFactory
 from ..serializers import LoginSerializer, UserDetailSerializer
 
@@ -71,4 +73,21 @@ class UserDetailSerializerTestCase(TestCase):
         self.assertListEqual(
             sorted(serializer.data['permissions']),
             user_permissions,
+        )
+
+    def test_bankaccounts_none(self):
+        user = UserFactory()
+        serializer = UserDetailSerializer(user)
+        self.assertListEqual(serializer.data['bankaccounts'], [])
+
+    def test_bankaccounts_owner(self):
+        user = UserFactory()
+        ba1 = BankAccountFactory(owners=[user])
+        ba2 = BankAccountFactory(owners=[user])
+        BankAccountFactory()
+
+        serializer = UserDetailSerializer(user)
+        self.assertListEqual(
+            [ba1.pk, ba2.pk],
+            sorted([b['id'] for b in serializer.data['bankaccounts']]),
         )

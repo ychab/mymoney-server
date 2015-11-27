@@ -3,6 +3,8 @@ from django.utils.translation import ugettext as _
 
 from rest_framework import serializers
 
+from mymoney.api.bankaccounts.serializers import BankAccountSerializer
+
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -33,6 +35,11 @@ class UserSerializer(serializers.ModelSerializer):
 
 
 class UserDetailSerializer(UserSerializer):
+    bankaccounts = BankAccountSerializer(many=True)
+
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + ('bankaccounts',)
+        read_only_fields = fields
 
     def to_representation(self, instance):
         data = super(UserSerializer, self).to_representation(instance)
