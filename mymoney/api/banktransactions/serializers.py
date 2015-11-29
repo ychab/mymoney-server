@@ -1,5 +1,7 @@
 import time
 
+from django.template.defaultfilters import date as date_format
+
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
@@ -50,10 +52,12 @@ class BankTransactionDetailSerializer(serializers.ModelSerializer):
         ret = super(
             BankTransactionDetailSerializer, self).to_representation(instance)
 
+        ret['date_view'] = date_format(instance.date, 'SHORT_DATE_FORMAT')
         ret['amount_localized'] = localize_signed_amount(instance.amount)
         ret['amount_currency'] = localize_signed_amount_currency(
             instance.amount, instance.currency)
         ret['payment_method_display'] = instance.get_payment_method_display()
+        ret['status_display'] = instance.get_status_display()
 
         return ret
 
@@ -67,6 +71,21 @@ class BankTransactionDetailExtraSerializer(BankTransactionDetailSerializer):
             BankTransactionDetailSerializer.Meta.fields + (
                 'balance_total', 'balance_reconciled')
         )
+
+    def to_representation(self, instance):
+        ret = super(
+            BankTransactionDetailExtraSerializer, self).to_representation(instance)
+
+        fields = ('balance_total', 'balance_reconciled')
+        for field in fields:
+            attr = getattr(instance, field)
+            key = field + '_view'
+            if attr is not None:
+                ret[key] = localize_signed_amount(attr)
+            else:
+                ret[key] = None
+
+        return ret
 
 
 class BankTransactionTeaserSerializer(serializers.ModelSerializer):

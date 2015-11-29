@@ -1,5 +1,6 @@
 import datetime
 import time
+from decimal import Decimal
 
 from django.test import TestCase, override_settings
 
@@ -12,12 +13,30 @@ from mymoney.api.bankaccounts.factories import BankAccountFactory
 from ..factories import BankTransactionFactory
 from ..models import BankTransaction
 from ..serializers import (
-    BankTransactionDetailSerializer, BankTransactionEventInputSerializer,
-    BankTransactionEventOutputSerializer,
+    BankTransactionDetailExtraSerializer, BankTransactionDetailSerializer,
+    BankTransactionEventInputSerializer, BankTransactionEventOutputSerializer,
 )
 
 
 class BankTransactionDetailSerializerTestCase(TestCase):
+
+    @override_settings(LANGUAGE_CODE='en-us')
+    def test_date_format_localize_en_us(self):
+        banktransaction = BankTransactionFactory(date=datetime.date(2015, 11, 30))
+        serializer = BankTransactionDetailSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['date_view'],
+            '11/30/2015',
+        )
+
+    @override_settings(LANGUAGE_CODE='fr-fr')
+    def test_date_format_localize_fr_fr(self):
+        banktransaction = BankTransactionFactory(date=datetime.date(2015, 11, 30))
+        serializer = BankTransactionDetailSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['date_view'],
+            '30/11/2015',
+        )
 
     @override_settings(LANGUAGE_CODE='en-us')
     def test_localize_amount_en_us(self):
@@ -69,6 +88,67 @@ class BankTransactionDetailSerializerTestCase(TestCase):
         self.assertEqual(
             serializer.data['payment_method_display'],
             'Cash',
+        )
+
+    @override_settings(LANGUAGE_CODE='en-us')
+    def test_status_label_localize_en_us(self):
+        banktransaction = BankTransactionFactory(
+            status=BankTransaction.STATUS_IGNORED)
+        serializer = BankTransactionDetailSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['status_display'],
+            'Ignored',
+        )
+
+
+class BankTransactionDetailExtraSerializerTestCase(TestCase):
+
+    @override_settings(LANGUAGE_CODE='en-us')
+    def test_balance_total_localize_en_us(self):
+        banktransaction = BankTransactionFactory()
+        banktransaction.balance_total = Decimal('20.15')
+        banktransaction.balance_reconciled = Decimal('20.15')
+
+        serializer = BankTransactionDetailExtraSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['balance_total_view'],
+            '+20.15',
+        )
+
+    @override_settings(LANGUAGE_CODE='fr-fr')
+    def test_balance_total_localize_fr_fr(self):
+        banktransaction = BankTransactionFactory()
+        banktransaction.balance_total = Decimal('20.15')
+        banktransaction.balance_reconciled = Decimal('20.15')
+
+        serializer = BankTransactionDetailExtraSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['balance_total_view'],
+            '+20,15',
+        )
+
+    @override_settings(LANGUAGE_CODE='en-us')
+    def test_balance_reconciled_localize_en_us(self):
+        banktransaction = BankTransactionFactory()
+        banktransaction.balance_total = Decimal('20.15')
+        banktransaction.balance_reconciled = Decimal('20.15')
+
+        serializer = BankTransactionDetailExtraSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['balance_reconciled_view'],
+            '+20.15',
+        )
+
+    @override_settings(LANGUAGE_CODE='fr-fr')
+    def test_balance_reconciled_localize_fr_fr(self):
+        banktransaction = BankTransactionFactory()
+        banktransaction.balance_reconciled = Decimal('20.15')
+        banktransaction.balance_total = Decimal('20.15')
+
+        serializer = BankTransactionDetailExtraSerializer(banktransaction)
+        self.assertEqual(
+            serializer.data['balance_reconciled_view'],
+            '+20,15',
         )
 
 
