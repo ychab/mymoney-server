@@ -1,13 +1,10 @@
-import datetime
 from decimal import Decimal
 from unittest import mock
 
-from dateutil.relativedelta import relativedelta
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from mymoney.api.banktransactions.factories import BankTransactionFactory
 from mymoney.api.users.factories import UserFactory
 
 from ..factories import BankAccountFactory
@@ -40,53 +37,14 @@ class RetrieveViewTestCase(APITestCase):
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
 
-    def test_serializer_balance_current(self):
-        bankaccount = BankAccountFactory(balance=0, owners=[self.user])
-        BankTransactionFactory(
-            bankaccount=bankaccount,
-            date=datetime.date.today(),
-            amount=10,
-        )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
-            date=datetime.date.today(),
-            amount=10,
-        )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
-            date=datetime.date.today() + relativedelta(days=5),
-            amount=10,
-        )
-        url = reverse('bankaccounts:bankaccount-detail', kwargs={
-            'pk': bankaccount.pk,
-        })
+    def test_retrieve(self):
         self.client.force_authenticate(self.user)
-        response = self.client.get(url)
-        self.assertEqual(Decimal(response.data['balance_current']), Decimal('20'))
-
-    def test_serializer_balance_reconciled(self):
-        bankaccount = BankAccountFactory(balance=0, owners=[self.user])
-        BankTransactionFactory(
-            bankaccount=bankaccount,
-            amount=10,
-            reconciled=True,
-        )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
-            amount=10,
-            reconciled=True,
-        )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
-            amount=10,
-            reconciled=False,
-        )
-        url = reverse('bankaccounts:bankaccount-detail', kwargs={
-            'pk': bankaccount.pk,
-        })
-        self.client.force_authenticate(self.user)
-        response = self.client.get(url)
-        self.assertEqual(Decimal(response.data['balance_reconciled']), Decimal('20'))
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('balance_view', response.data)
+        self.assertIn('balance_initial_view', response.data)
+        self.assertIn('balance_current_view', response.data)
+        self.assertIn('balance_reconciled_view', response.data)
 
 
 class ListViewTestCase(APITestCase):
