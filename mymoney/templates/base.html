@@ -30,10 +30,6 @@
         </section>
     </div>
 
-    <script type="text/javascript">
-        var djangoSettings = {{ django_settings|safe }};
-    </script>
-
     <script type="text/javascript" src="{% static 'mymoney/dist/js/mymoney.min.js' %}"></script>
     {% if dist_l10n_src %}
     <script type="text/javascript" src="{% static dist_l10n_src %}"></script>
