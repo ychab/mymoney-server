@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    {% verbatim %}<title data-ng-bind-template="{{main.page.title}}">{% endverbatim %}MyMoney</title>
+    {% verbatim %}<title data-ng-bind-template="{{ main.page.title|translate }}">{% endverbatim %}MyMoney</title>
     <link href="{% static 'mymoney/bower_components/bootstrap/dist/css/bootstrap.min.css' %}" rel="stylesheet" />
     <link href="{% static 'mymoney/dist/css/mymoney.min.css' %}" rel="stylesheet" />
     <meta name="robots" content="NONE,NOARCHIVE" />
@@ -16,7 +16,7 @@
 
     <div class="container" role="main">
         <section>
-            {% verbatim %}<h1 class="page-header" data-ng-bind-template="{{main.page.title}}">{% endverbatim %}MyMoney</h1>
+            {% verbatim %}<h1 class="page-header" data-ng-bind-template="{{ main.page.title|translate }}">{% endverbatim %}MyMoney</h1>
 
             <div data-ng-include="main.templates.breadcrumb"></div>
             <div data-ng-include="main.templates.menuActions"></div>
