@@ -10,6 +10,7 @@ from mymoney.api.banktransactionschedulers.views import \
     BankTransactionSchedulerViewSet
 from mymoney.api.banktransactiontags.views import BankTransactionTagViewSet
 from mymoney.api.users.views import LoginAPIView, LogoutAPIView, UserViewSet
+from mymoney.core.views import ConfigAPIView
 
 user_router = DefaultRouter()
 user_router.register(
@@ -32,6 +33,7 @@ banktransactionschedulers_router.register(
     r'', BankTransactionSchedulerViewSet, base_name='banktransactionscheduler')
 
 urlpatterns = [
+    url(r'^config/$', ConfigAPIView.as_view(), name='config'),
     url(r'^login/$', LoginAPIView.as_view(), name='login'),
     url(r'^logout/$', LogoutAPIView.as_view(), name='logout'),
     url(

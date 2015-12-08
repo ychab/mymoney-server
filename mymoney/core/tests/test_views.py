@@ -2,6 +2,11 @@ from django.conf import settings
 from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
 
+from rest_framework.reverse import reverse as reverse_api
+from rest_framework.test import APITestCase
+
+from mymoney.api.banktransactions.models import BankTransaction
+
 
 class HomeViewTestCase(TestCase):
 
@@ -43,3 +48,50 @@ class HomeViewTestCase(TestCase):
             'mymoney/dist/js/locales/fr.min.js',
             response.context['dist_l10n_src'],
         )
+
+
+class ConfigAPITestCase(APITestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.url = reverse_api('config')
+
+    def test_access_anonymous(self):
+        response = self.client.options(self.url)
+        self.assertEqual(response.status_code, 200)
+
+    def test_currencies(self):
+        response = self.client.options(self.url)
+        self.assertIn('EUR', response.data['currencies'])
+        self.assertIn('USD', response.data['currencies'])
+
+    @override_settings(LANGUAGE_CODE='fr-fr')
+    def test_currencies_localize(self):
+        response = self.client.options(self.url)
+        self.assertIn(response.data['currencies']['EUR'], 'Euro')
+        self.assertIn(response.data['currencies']['USD'], 'US Dollar')
+
+    def test_payment_methods(self):
+        response = self.client.options(self.url)
+        self.assertIn(
+            BankTransaction.PAYMENT_METHOD_CASH,
+            response.data['payment_methods'],
+        )
+
+    @override_settings(LANGUAGE_CODE='fr-fr')
+    def test_payment_methods_localize(self):
+        response = self.client.options(self.url)
+        self.assertEqual(
+            response.data['payment_methods'][BankTransaction.PAYMENT_METHOD_CASH],
+            'Espèce',
+        )
+
+    def test_statuses(self):
+        response = self.client.options(self.url)
+        self.assertIn(BankTransaction.STATUS_IGNORED, response.data['statuses'])
+
+    @override_settings(LANGUAGE_CODE='fr-fr')
+    def test_statuses_localize(self):
+        response = self.client.options(self.url)
+        self.assertEqual(
+            response.data['statuses'][BankTransaction.STATUS_IGNORED], 'Ignoré')
