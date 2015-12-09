@@ -2,7 +2,6 @@ from django.conf import settings
 from django.utils.translation import get_language, to_locale
 from django.views.generic import TemplateView
 
-from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -26,9 +25,8 @@ class HomeView(TemplateView):
 
 
 class ConfigAPIView(APIView):
-    permission_classes = (AllowAny,)
 
-    def options(self, request, *args, **kwargs):
+    def get(self, request, *args, **kwargs):
         return Response({
             'currencies': dict(get_currencies()),
             'payment_methods': dict(BankTransaction.PAYMENT_METHODS),
