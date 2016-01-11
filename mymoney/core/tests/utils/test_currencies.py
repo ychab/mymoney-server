@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from django.conf import settings
 from django.test import TestCase, override_settings
 
 from mymoney.core.utils.currencies import (
@@ -33,10 +32,9 @@ class CurrencyFormatTestCase(TestCase):
 
     @override_settings(LANGUAGE_CODE='it')
     def test_format_currency_it(self):
-        del settings.CURRENCY_PATTERN_FORMAT
         self.assertEqual(
             format_currency(-1547, 'EUR'),
-            "-€\xa01.547,00",
+            "-1.547,00\xa0€",
             )
 
     @override_settings(LANGUAGE_CODE='en-us')
