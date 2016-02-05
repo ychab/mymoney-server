@@ -32,22 +32,18 @@ class BankTransactionSchedulerManager(models.Manager):
         week_start = get_datetime_ranges(timezone.now(), GRANULARITY_WEEK)[0]
 
         monthly = (
-            Q(type=BankTransactionScheduler.TYPE_MONTHLY)
-            &
+            Q(type=BankTransactionScheduler.TYPE_MONTHLY) &
             Q(last_action__lt=month_start)
         )
         weekly = (
-            Q(type=BankTransactionScheduler.TYPE_WEEKLY)
-            &
+            Q(type=BankTransactionScheduler.TYPE_WEEKLY) &
             Q(last_action__lt=week_start)
         )
 
         return self.filter(
-            Q(state=BankTransactionScheduler.STATE_WAITING)
-            |
+            Q(state=BankTransactionScheduler.STATE_WAITING) |
             (
-                Q(state=BankTransactionScheduler.STATE_FINISHED)
-                &
+                Q(state=BankTransactionScheduler.STATE_FINISHED) &
                 (monthly | weekly)
             )
         )
