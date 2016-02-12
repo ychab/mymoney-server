@@ -1,4 +1,4 @@
 -r base.txt
 
-factory-boy==2.6.0
+factory-boy==2.6.1
 coverage==4.0.3
