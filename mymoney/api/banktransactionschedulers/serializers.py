@@ -17,11 +17,6 @@ class BankTransactionSchedulerSerializer(BaseBankTransactionSerializer):
         read_only_fields = (
             BaseBankTransactionSerializer.Meta.read_only_fields + (
                 'reconciled', 'last_action', 'state'))
-        # WARNING - read only fields are copied into shared parent extra_kwargs!
-        # As a consequence, 'reconciled' field would be in read-only mode for
-        # BankTransactionSerializer. Instead, by using an explicit copy for
-        # extra_kwargs, we won't alter share parent property.
-        extra_kwargs = BaseBankTransactionSerializer.Meta.extra_kwargs.copy()
 
 
 class BankTransactionSchedulerCreateSerializer(BankTransactionSchedulerSerializer):
