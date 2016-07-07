@@ -168,11 +168,13 @@ class BankTransactionModelTestCase(TestCase):
             bankaccount=bankaccount,
             amount='-25',
         )
+        banktransaction_pk = banktransaction.pk
 
         with mock.patch.object(BankAccount, 'save', side_effect=Exception('Boom')):
             with self.assertRaises(Exception):
                 banktransaction.delete()
 
+        self.assertTrue(BankTransaction.objects.get(pk=banktransaction_pk))
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal(25))
 
