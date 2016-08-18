@@ -2,5 +2,5 @@ psycopg2==2.6.2
 python-dateutil==2.5.3
 Babel==2.3.4
 Django==1.9.8
-djangorestframework==3.4.0
-django-filter==0.13.0
+djangorestframework==3.4.4
+django-filter==0.14.0
