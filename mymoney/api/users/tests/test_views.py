@@ -49,7 +49,7 @@ class LoginViewTestCase(APITestCase):
             'password': 'foo',
         })
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.wsgi_request.user.is_authenticated())
+        self.assertTrue(response.wsgi_request.user.is_authenticated)
 
     def test_response(self):
         self.client.force_authenticate(None)
@@ -79,4 +79,4 @@ class LogoutViewTestCase(APITestCase):
         self.client.force_authenticate(user)
         response = self.client.post(self.url)
         self.assertEqual(response.status_code, 200)
-        self.assertTrue(response.wsgi_request.user.is_anonymous())
+        self.assertTrue(response.wsgi_request.user.is_anonymous)

@@ -41,7 +41,7 @@ class LoginSerializerTestCase(TestCase):
         })
         self.assertFalse(serializer.is_valid())
         self.assertEqual(
-            'Your account is not active.',
+            'Invalid username or password.',
             serializer.errors[api_settings.NON_FIELD_ERRORS_KEY][0],
         )
 

@@ -1,4 +1,3 @@
-
 from django.conf.urls import include, url
 
 from rest_framework.routers import DefaultRouter
@@ -38,27 +37,37 @@ urlpatterns = [
     url(r'^logout/$', LogoutAPIView.as_view(), name='logout'),
     url(
         r'^user', include(
-            user_router.urls, namespace='user'),
+            (user_router.urls, 'users'),
+            namespace='user',
+        ),
     ),
     url(
         r'^bank-accounts', include(
-            bankaccounts_router.urls, namespace='bankaccounts'),
+            (bankaccounts_router.urls, 'bankaccounts'),
+            namespace='bankaccounts',
+        ),
     ),
     url(
         r'^bank-transactions', include(
-            banktransactions_router.urls, namespace='banktransactions')
+            (banktransactions_router.urls, 'banktransactions'),
+            namespace='banktransactions',
+        )
     ),
     url(
         r'^bank-transaction-tags', include(
-            banktransactiontags_router.urls, namespace='banktransactiontags'),
+            (banktransactiontags_router.urls, 'banktransactiontags'),
+            namespace='banktransactiontags',
+        ),
     ),
     url(
         r'^bank-transaction-schedulers', include(
-            banktransactionschedulers_router.urls, namespace='banktransactionschedulers'),
+            (banktransactionschedulers_router.urls, 'banktransactionschedulers'),
+            namespace='banktransactionschedulers',
+        ),
     ),
     url(
         r'^bank-transaction-analytics/', include(
-            'mymoney.api.banktransactionanalytics.urls',
+            ('mymoney.api.banktransactionanalytics.urls', 'banktransactionanalytics'),
             namespace='banktransactionanalytics',
         ),
     ),

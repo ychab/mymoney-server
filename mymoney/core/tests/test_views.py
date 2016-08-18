@@ -1,6 +1,6 @@
 from django.conf import settings
-from django.core.urlresolvers import reverse
 from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from rest_framework.reverse import reverse as reverse_api
 from rest_framework.test import APITestCase

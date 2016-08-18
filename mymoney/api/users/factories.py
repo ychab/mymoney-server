@@ -19,10 +19,10 @@ class UserFactory(factory.DjangoModelFactory):
 
         if create and extracted:
             if extracted == 'all':
-                self.user_permissions = UserFactory.get_permissions()
+                self.user_permissions.set(UserFactory.get_permissions())
             else:
-                self.user_permissions = Permission.objects.filter(
-                    codename__in=extracted)
+                self.user_permissions.set(
+                    Permission.objects.filter(codename__in=extracted))
 
     @classmethod
     def get_permissions(cls):
