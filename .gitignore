@@ -1,14 +1,20 @@
-.idea
 __pycache__
 *.pyc
+
 .coverage
 .tox
 docs/_build/
+
 fabfile.py
+
 mymoney/settings/*.py
 !mymoney/settings/__init__.py
 !mymoney/settings/base.py
-
 mymoney/static/mymoney/*
+
+.idea
+.python-version
+.vscode
+.history
 
 ROADMAP.txt

@@ -1,6 +1,6 @@
-psycopg2==2.6.2
-python-dateutil==2.5.3
-Babel==2.3.4
-Django==1.10.3
+psycopg2==2.7.1
+python-dateutil==2.6.0
+Babel==2.4
+Django==1.10.6
 djangorestframework==3.4.6
 django-filter==0.14.0
