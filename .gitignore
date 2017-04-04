@@ -5,6 +5,9 @@ __pycache__
 .tox
 docs/_build/
 
+.python-version
+.virtualenv
+
 fabfile.py
 
 mymoney/settings/*.py
@@ -13,7 +16,6 @@ mymoney/settings/*.py
 mymoney/static/mymoney/*
 
 .idea
-.python-version
 .vscode
 .history
 

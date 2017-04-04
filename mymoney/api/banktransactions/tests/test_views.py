@@ -1151,13 +1151,6 @@ class ListViewTestCase(APITestCase):
         self.assertEqual(response.data['count'], 1)
         self.assertEqual(response.data['results'][0]['id'], bt.pk)
 
-        response = self.client.get(self.url, data={
-            'reconciled': '2',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], bt.pk)
-
     def test_filter_unreconciled(self):
         bt = BankTransactionFactory(
             bankaccount=self.bankaccount,
@@ -1178,13 +1171,6 @@ class ListViewTestCase(APITestCase):
 
         response = self.client.get(self.url, data={
             'reconciled': 'False',
-        })
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], bt.pk)
-
-        response = self.client.get(self.url, data={
-            'reconciled': '3',
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 1)
