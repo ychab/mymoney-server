@@ -5,14 +5,14 @@ from django.utils.six import StringIO
 
 from mymoney.api.bankaccounts.factories import BankAccountFactory
 from mymoney.api.bankaccounts.models import BankAccount
-from mymoney.api.banktransactions.factories import BankTransactionFactory
-from mymoney.api.banktransactions.models import BankTransaction
-from mymoney.api.banktransactionschedulers.factories import \
+from mymoney.banktransactions.factories import BankTransactionFactory
+from mymoney.banktransactions import BankTransaction
+from mymoney.banktransactionschedulers.factories import \
     BankTransactionSchedulerFactory
-from mymoney.api.banktransactionschedulers.models import \
+from mymoney.banktransactionschedulers.models import \
     BankTransactionScheduler
-from mymoney.api.banktransactiontags.factories import BankTransactionTagFactory
-from mymoney.api.banktransactiontags.models import BankTransactionTag
+from mymoney.banktransactiontags import BankTransactionTagFactory
+from mymoney.banktransactiontags import BankTransactionTag
 from mymoney.api.users.factories import UserFactory
 
 

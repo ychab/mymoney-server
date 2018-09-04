@@ -8,15 +8,9 @@ docs/_build/
 .python-version
 .virtualenv
 
-fabfile.py
-
-mymoney/settings/*.py
-!mymoney/settings/__init__.py
-!mymoney/settings/base.py
-mymoney/static/mymoney/*
+mymoney/settings/local.py.dist
+mymoney/static
 
 .idea
 .vscode
 .history
-
-ROADMAP.txt

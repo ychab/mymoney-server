@@ -99,7 +99,7 @@ Development
 
 * Install dependencies::
 
-    pip install -r requirements/local.txt
+    pip install -r requirements/dev.txt
 
 * copy ``mymoney/settings/local.dist`` to ``mymoney/settings/local.py`` and
   edit it::

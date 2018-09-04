@@ -5,7 +5,7 @@ from django.urls import reverse
 from rest_framework.reverse import reverse as reverse_api
 from rest_framework.test import APITestCase
 
-from mymoney.api.banktransactions.models import BankTransaction
+from mymoney.banktransactions import BankTransaction
 from mymoney.api.users.factories import UserFactory
 
 

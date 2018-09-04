@@ -1,25 +1,23 @@
 sudo: false
 language: python
 python:
-    - "3.5"
+    - "3.6"
 addons:
     postgresql: "9.4"
 env:
-    - TOXENV=pylama
-    - TOXENV=isort
+    - TOXENV=codestyle
+    - TOXENV=sort
     - TOXENV=docs
-    - TOXENV=py35-std
-    - TOXENV=py34-reverse
-    - TOXENV=py35-reverse
-    - TOXENV=py34-coverage
+    - TOXENV=py36-reverse
+    - TOXENV=py36-coverage
 install:
     - pip install coveralls tox
 before_script:
     - createuser -U postgres -d mymoney
     - createdb -U postgres -O mymoney mymoney
-    - cp mymoney/settings/test.dist mymoney/settings/test.py
-    - sed -i 's/<DB_NAME>/mymoney/g' mymoney/settings/test.py
-    - sed -i 's/<DB_USER>/mymoney/g' mymoney/settings/test.py
+    - cp mymoney/settings/local.py.dist mymoney/settings/local.py
+    - sed -i 's/<DB_NAME>/mymoney/g' mymoney/settings/local.py
+    - sed -i 's/<DB_USER>/mymoney/g' mymoney/settings/local.py
 script:
     - tox
 after_success:

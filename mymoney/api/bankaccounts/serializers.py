@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from mymoney.api.banktransactions.models import BankTransaction
+from mymoney.banktransactions import BankTransaction
 from mymoney.core.utils.currencies import localize_signed_amount_currency
 
 from .models import BankAccount

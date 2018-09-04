@@ -5,7 +5,7 @@ from django.test import TestCase, override_settings
 
 from dateutil.relativedelta import relativedelta
 
-from mymoney.api.banktransactions.factories import BankTransactionFactory
+from mymoney.banktransactions.factories import BankTransactionFactory
 
 from ..factories import BankAccountFactory
 from ..serializers import BankAccountDetailSerializer, BankAccountSerializer
