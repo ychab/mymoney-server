@@ -3,29 +3,19 @@ from django.utils import timezone
 from dateutil.relativedelta import relativedelta
 from factory import fuzzy
 
-from mymoney.banktransactions import \
-    AbstractBankTransactionFactory
+from mymoney.transactions.factories import AbstractTransactionFactory
 
-from .models import BankTransactionScheduler
+from .models import Scheduler
 
 
-class BankTransactionSchedulerFactory(AbstractBankTransactionFactory):
+class SchedulerFactory(AbstractTransactionFactory):
 
     class Meta:
-        model = BankTransactionScheduler
+        model = Scheduler
 
-    type = fuzzy.FuzzyChoice(dict(BankTransactionScheduler.TYPES).keys())
+    type = fuzzy.FuzzyChoice(dict(Scheduler.TYPES).keys())
     recurrence = fuzzy.FuzzyInteger(2, 10)
     last_action = fuzzy.FuzzyDateTime(
         start_dt=timezone.now() - relativedelta(months=2),
     )
-    state = fuzzy.FuzzyChoice(dict(BankTransactionScheduler.STATES).keys())
-
-    @classmethod
-    def _prepare(cls, create, **kwargs):
-        obj = super(BankTransactionSchedulerFactory, cls)._prepare(create, **kwargs)
-
-        if obj.state == BankTransactionScheduler.STATE_WAITING:
-            obj.last_action = None
-
-        return obj
+    state = fuzzy.FuzzyChoice(dict(Scheduler.STATES).keys())

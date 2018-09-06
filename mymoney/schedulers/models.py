@@ -8,70 +8,68 @@ from django.utils.translation import ugettext_lazy as _
 
 from dateutil.relativedelta import relativedelta
 
-from mymoney.banktransactions import (
-    AbstractBankTransaction, BankTransaction,
-)
-from mymoney.core.utils.dates import (
+from mymoney.core.utils import (
     GRANULARITY_MONTH, GRANULARITY_WEEK, get_datetime_ranges,
 )
+from mymoney.transactions.models import AbstractTransaction, Transaction
 
 logger = logging.getLogger('mymoney.errors')
 
 
-class BankTransactionSchedulerManager(models.Manager):
+class SchedulerManager(models.Manager):
 
-    def get_awaiting_banktransactions(self):
+    def get_awaiting_transactions(self):
         """
         Return awaiting bank transaction scheduled. To be awaiting :
-        - have explicit state BankTransactionScheduler.STATE_WAITING
+        - have explicit state BankScheduler.STATE_WAITING
         OR
-        - have state BankTransactionScheduler.STATE_FINISHED and being lower
+        - have state BankScheduler.STATE_FINISHED and being lower
           than the recurring datetime, depending on its type.
         """
         month_start = get_datetime_ranges(timezone.now(), GRANULARITY_MONTH)[0]
         week_start = get_datetime_ranges(timezone.now(), GRANULARITY_WEEK)[0]
 
         monthly = (
-            Q(type=BankTransactionScheduler.TYPE_MONTHLY) &
-            Q(last_action__lt=month_start)
+                Q(type=Scheduler.TYPE_MONTHLY) &
+                Q(last_action__lt=month_start)
         )
         weekly = (
-            Q(type=BankTransactionScheduler.TYPE_WEEKLY) &
-            Q(last_action__lt=week_start)
+                Q(type=Scheduler.TYPE_WEEKLY) &
+                Q(last_action__lt=week_start)
         )
 
         return self.filter(
-            Q(state=BankTransactionScheduler.STATE_WAITING) |
+            Q(state=Scheduler.STATE_WAITING) |
             (
-                Q(state=BankTransactionScheduler.STATE_FINISHED) &
-                (monthly | weekly)
+                    Q(state=Scheduler.STATE_FINISHED) &
+                    (monthly | weekly)
             )
         )
 
-    def get_total_debit(self, bankaccount):
+    def get_total_debit(self, account):
         return dict(
             self.filter(
-                bankaccount=bankaccount,
+                account=account,
                 amount__lt=0,
             )
-            .exclude(status=BankTransactionScheduler.STATUS_INACTIVE)
+            .exclude(status=Scheduler.STATUS_INACTIVE)
             .values_list('type')
             .annotate(total=Sum('amount'))
         )
 
-    def get_total_credit(self, bankaccount):
+    def get_total_credit(self, account):
         return dict(
             self.filter(
-                bankaccount=bankaccount,
+                account=account,
                 amount__gt=0,
             )
-            .exclude(status=BankTransactionScheduler.STATUS_INACTIVE)
+            .exclude(status=Scheduler.STATUS_INACTIVE)
             .values_list('type')
             .annotate(total=Sum('amount'))
         )
 
 
-class BankTransactionScheduler(AbstractBankTransaction):
+class Scheduler(AbstractTransaction):
 
     TYPE_MONTHLY = 'monthly'
     TYPE_WEEKLY = 'weekly'
@@ -116,32 +114,31 @@ class BankTransactionScheduler(AbstractBankTransaction):
         help_text=_('State of the scheduled bank transaction.'),
     )
 
-    objects = BankTransactionSchedulerManager()
+    objects = SchedulerManager()
 
     class Meta:
-        db_table = 'banktransactionschedulers'
-        index_together = [
-            "state",
-            "last_action",
+        db_table = 'schedulers'
+        indexes = [
+            models.Index(fields=['state', 'last_action']),
         ]
 
     def clone(self):
         """
-        Clone the model instance into a BankTransaction instance.
+        Clone the model instance into a transaction instance.
         """
 
         try:
             with transaction.atomic():
 
                 # Create a new bank transaction based on model.
-                if self.type == BankTransactionScheduler.TYPE_MONTHLY:
+                if self.type == Scheduler.TYPE_MONTHLY:
                     datedelta = relativedelta(months=1)
-                elif self.type == BankTransactionScheduler.TYPE_WEEKLY:  # pragma: no branch
+                elif self.type == Scheduler.TYPE_WEEKLY:  # pragma: no branch
                     datedelta = timedelta(weeks=1)
 
-                BankTransaction.objects.create(
+                Transaction.objects.create(
                     label=self.label,
-                    bankaccount=self.bankaccount,
+                    account=self.account,
                     date=self.date + datedelta,
                     amount=self.amount,
                     status=self.status,
@@ -161,7 +158,7 @@ class BankTransactionScheduler(AbstractBankTransaction):
                 else:
                     self.date = self.date + datedelta
                     self.last_action = timezone.now()
-                    self.state = BankTransactionScheduler.STATE_FINISHED
+                    self.state = Scheduler.STATE_FINISHED
                     self.save()
 
         except Exception as e:
@@ -170,8 +167,8 @@ class BankTransactionScheduler(AbstractBankTransaction):
                 # Try to release lock with an explicit failed state. Use
                 # low-level API to prevent potential new exception (instead of
                 # a new save() method with update_fields).
-                BankTransactionScheduler.objects\
+                Scheduler.objects\
                     .filter(pk=self.pk)\
-                    .update(state=BankTransactionScheduler.STATE_FAILED)
+                    .update(state=Scheduler.STATE_FAILED)
             except Exception:
                 pass

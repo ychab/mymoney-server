@@ -4,479 +4,479 @@ from unittest import mock
 
 from django.test import TestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
-from mymoney.api.bankaccounts.models import BankAccount
-from mymoney.banktransactiontags import BankTransactionTagFactory
+from mymoney.accounts.factories import AccountFactory
+from mymoney.accounts.models import Account
+from mymoney.tags.factories import TagFactory
 
-from ..factories import BankTransactionFactory
-from ..models import BankTransaction
+from ..factories import TransactionFactory
+from ..models import Transaction
 
 
-class BankTransactionModelTestCase(TestCase):
+class TransactionModelTestCase(TestCase):
 
     def test_status_inactive_create(self):
-        bankaccount = BankAccountFactory(balance=100)
+        account = AccountFactory(balance=100)
 
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=Decimal('150'),
-            status=BankTransaction.STATUS_INACTIVE
+            status=Transaction.STATUS_INACTIVE
         )
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(100))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(100))
 
     def test_status_inactive_update(self):
-        bankaccount = BankAccountFactory(balance=100)
+        account = AccountFactory(balance=100)
 
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        transaction = TransactionFactory(
+            account=account,
             amount=Decimal('150'),
         )
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('250'))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('250'))
 
-        banktransaction.status = BankTransaction.STATUS_INACTIVE
-        banktransaction.amount = Decimal('180')
-        banktransaction.save()
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('250'))
+        transaction.status = Transaction.STATUS_INACTIVE
+        transaction.amount = Decimal('180')
+        transaction.save()
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('250'))
 
     def test_force_currency(self):
-        bankaccount = BankAccountFactory(currency='EUR')
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(currency='EUR')
+        transaction = TransactionFactory(
+            account=account,
             currency='USD',
         )
-        self.assertEqual(banktransaction.currency, 'EUR')
+        self.assertEqual(transaction.currency, 'EUR')
 
     def test_insert(self):
-        bankaccount = BankAccountFactory(balance=-10)
+        account = AccountFactory(balance=-10)
 
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount='15.59',
         )
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('5.59'))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('5.59'))
 
     def test_insert_fail(self):
-        bankaccount = BankAccountFactory(balance=0)
+        account = AccountFactory(balance=0)
 
-        with mock.patch.object(BankTransaction, 'save', side_effect=Exception('Bang')):
+        with mock.patch.object(Transaction, 'save', side_effect=Exception('Bang')):
             with self.assertRaises(Exception):
-                BankTransactionFactory(
-                    bankaccount=bankaccount,
+                TransactionFactory(
+                    account=account,
                     amount='15.59',
                 )
 
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, 0)
+        account.refresh_from_db()
+        self.assertEqual(account.balance, 0)
 
-    def test_save_bankaccount_update_fail(self):
-        bankaccount = BankAccountFactory(balance=0)
+    def test_save_account_update_fail(self):
+        account = AccountFactory(balance=0)
 
-        with mock.patch.object(BankAccount, 'save', side_effect=Exception('Boom')):
+        with mock.patch.object(Account, 'save', side_effect=Exception('Boom')):
             with self.assertRaises(Exception):
-                BankTransactionFactory(
-                    bankaccount=bankaccount,
+                TransactionFactory(
+                    account=account,
                     amount='15.59',
                 )
 
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, 0)
+        account.refresh_from_db()
+        self.assertEqual(account.balance, 0)
 
     def test_update(self):
-        bankaccount = BankAccountFactory(balance=-10)
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=-10)
+        transaction = TransactionFactory(
+            account=account,
             amount='15.59',
         )
 
-        banktransaction.refresh_from_db()
-        banktransaction.amount += Decimal('14.41')
-        banktransaction.save()
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('20'))
+        transaction.refresh_from_db()
+        transaction.amount += Decimal('14.41')
+        transaction.save()
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('20'))
 
     def test_update_fail(self):
-        bankaccount = BankAccountFactory(balance=0)
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        transaction = TransactionFactory(
+            account=account,
             amount='-10',
         )
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(-10))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(-10))
 
-        with mock.patch.object(BankTransaction, 'save', side_effect=Exception('Bang')):
+        with mock.patch.object(Transaction, 'save', side_effect=Exception('Bang')):
             with self.assertRaises(Exception):
-                banktransaction.amount = -50
-                banktransaction.save()
+                transaction.amount = -50
+                transaction.save()
 
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(-10))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(-10))
 
     def test_status_inactive_delete(self):
-        bankaccount = BankAccountFactory(balance=100)
+        account = AccountFactory(balance=100)
 
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        transaction = TransactionFactory(
+            account=account,
             amount=Decimal('150'),
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('100'))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('100'))
 
-        BankTransactionFactory(bankaccount=bankaccount, amount=Decimal('50'))
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('150'))
+        TransactionFactory(account=account, amount=Decimal('50'))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('150'))
 
-        banktransaction.delete()
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal('150'))
+        transaction.delete()
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal('150'))
 
     def test_delete(self):
-        bankaccount = BankAccountFactory(balance=50)
+        account = AccountFactory(balance=50)
 
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        transaction = TransactionFactory(
+            account=account,
             amount='-25',
         )
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(25))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(25))
 
-        banktransaction.delete()
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(50))
+        transaction.delete()
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(50))
 
     def test_delete_fail(self):
-        bankaccount = BankAccountFactory(balance=50)
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=50)
+        transaction = TransactionFactory(
+            account=account,
             amount='-25',
         )
 
-        with mock.patch.object(BankTransaction, 'delete', side_effect=Exception('Bang')):
+        with mock.patch.object(Transaction, 'delete', side_effect=Exception('Bang')):
             with self.assertRaises(Exception):
-                banktransaction.delete()
+                transaction.delete()
 
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(25))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(25))
 
-    def test_delete_bankaccount_update_fail(self):
-        bankaccount = BankAccountFactory(balance=50)
-        banktransaction = BankTransactionFactory(
-            bankaccount=bankaccount,
+    def test_delete_account_update_fail(self):
+        account = AccountFactory(balance=50)
+        transaction = TransactionFactory(
+            account=account,
             amount='-25',
         )
-        banktransaction_pk = banktransaction.pk
+        transaction_pk = transaction.pk
 
-        with mock.patch.object(BankAccount, 'save', side_effect=Exception('Boom')):
+        with mock.patch.object(Account, 'save', side_effect=Exception('Boom')):
             with self.assertRaises(Exception):
-                banktransaction.delete()
+                transaction.delete()
 
-        self.assertTrue(BankTransaction.objects.get(pk=banktransaction_pk))
-        bankaccount.refresh_from_db()
-        self.assertEqual(bankaccount.balance, Decimal(25))
+        self.assertTrue(Transaction.objects.get(pk=transaction_pk))
+        account.refresh_from_db()
+        self.assertEqual(account.balance, Decimal(25))
 
 
-class BankTransactionManagerTestCase(TestCase):
+class TransactionManagerTestCase(TestCase):
 
     def test_current_balance_none(self):
-        bankaccount = BankAccountFactory(balance=0)
+        account = AccountFactory(balance=0)
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(account),
             0,
         )
 
-    def test_current_balance_other_bankaccounts(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+    def test_current_balance_other_accounts(self):
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
         )
-        BankTransactionFactory(
+        TransactionFactory(
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(account),
             Decimal('-15'),
         )
 
     def test_current_balance_inactive(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(account),
             Decimal('-15'),
         )
 
     def test_current_balance_future(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() + datetime.timedelta(5),
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(account),
             Decimal('-15'),
         )
 
     def test_current_balance(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=40,
             date=datetime.date.today() - datetime.timedelta(5),
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(account),
             Decimal('10'),
         )
 
     def test_reconciled_balance_none(self):
-        bankaccount = BankAccountFactory(balance=0)
+        account = AccountFactory(balance=0)
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(account),
             0,
         )
 
-    def test_reconciled_balance_other_bankaccount(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+    def test_reconciled_balance_other_account(self):
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=True,
         )
-        BankTransactionFactory(
+        TransactionFactory(
             amount=-15,
             reconciled=True,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(account),
             Decimal('-15'),
         )
 
     def test_reconciled_balance_unreconciled(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=True,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(account),
             Decimal('-15'),
         )
 
     def test_reconciled_balance_inactive(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=True,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=True,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(account),
             Decimal('-15'),
         )
 
     def test_reconciled_balance(self):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=True,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=-15,
             reconciled=True,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             amount=40,
             reconciled=True,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(account),
             Decimal('10'),
         )
 
     def test_total_unscheduled_period_none(self):
-        bankaccount = BankAccountFactory(balance=0)
+        account = AccountFactory(balance=0)
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(account),
             0,
         )
 
     @mock.patch(
-        'mymoney.api.banktransactions.models.timezone.now',
+        'mymoney.transactions.models.timezone.now',
         return_value=datetime.date(2015, 10, 26))
-    def test_total_unscheduled_period_other_bankaccount(self, mock_tz):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+    def test_total_unscheduled_period_other_account(self, mock_tz):
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
-        BankTransactionFactory(
+        TransactionFactory(
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(account),
             Decimal('-15'),
         )
 
     @mock.patch(
-        'mymoney.api.banktransactions.models.timezone.now',
+        'mymoney.transactions.models.timezone.now',
         return_value=datetime.date(2015, 10, 26))
     def test_total_unscheduled_period_out_of_ranges(self, mock_tz):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 11, 26),
             amount=-15,
             scheduled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(account),
             Decimal('-15'),
         )
 
     @mock.patch(
-        'mymoney.api.banktransactions.models.timezone.now',
+        'mymoney.transactions.models.timezone.now',
         return_value=datetime.date(2015, 10, 26))
     def test_total_unscheduled_period_scheduled(self, mock_tz):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=True,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(account),
             Decimal('-15'),
         )
 
     @mock.patch(
-        'mymoney.api.banktransactions.models.timezone.now',
+        'mymoney.transactions.models.timezone.now',
         return_value=datetime.date(2015, 10, 26))
     def test_total_unscheduled_period_inactive(self, mock_tz):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(account),
             Decimal('-15'),
         )
 
     @mock.patch(
-        'mymoney.api.banktransactions.models.timezone.now',
+        'mymoney.transactions.models.timezone.now',
         return_value=datetime.date(2015, 10, 26))
     def test_total_unscheduled_period(self, mock_tz):
-        bankaccount = BankAccountFactory(balance=0)
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        account = AccountFactory(balance=0)
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
         )
-        BankTransactionFactory(
-            bankaccount=bankaccount,
+        TransactionFactory(
+            account=account,
             date=datetime.date(2015, 10, 26),
             amount=40,
             scheduled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(account),
             Decimal('10'),
         )
 
 
 class RelationshipTestCase(TestCase):
 
-    def test_delete_bankaccount(self):
+    def test_delete_account(self):
 
-        bankaccount = BankAccountFactory()
-        tag = BankTransactionTagFactory()
-        banktransaction = BankTransactionFactory(bankaccount=bankaccount, tag=tag)
+        account = AccountFactory()
+        tag = TagFactory()
+        transaction = TransactionFactory(account=account, tag=tag)
 
-        bankaccount.delete()
+        account.delete()
 
-        with self.assertRaises(BankTransaction.DoesNotExist):
-            banktransaction.refresh_from_db()
+        with self.assertRaises(Transaction.DoesNotExist):
+            transaction.refresh_from_db()
 
         # Should not be deleted.
         tag.refresh_from_db()

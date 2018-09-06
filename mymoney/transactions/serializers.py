@@ -1,56 +1,45 @@
-import time
-
 from django.template.defaultfilters import date as date_format
 
 from rest_framework import serializers
-from rest_framework.reverse import reverse
 
-from mymoney.api.bankaccounts.fields import CurrentBankAccountDefault
-from mymoney.banktransactiontags import \
-    BankTransactionTagOutputSerializer
-from mymoney.banktransactiontags import \
-    BankTransactionTagOwnerValidator
-from mymoney.core.fields import TimestampMillisecond
-from mymoney.core.utils.currencies import (
-    localize_signed_amount, localize_signed_amount_currency,
+from mymoney.core.utils import (
+    get_default_account, localize_signed_amount,
+    localize_signed_amount_currency,
 )
-from mymoney.core.validators import MinMaxValidator
+from mymoney.tags.serializers import TagSerializer
 
-from .models import AbstractBankTransaction, BankTransaction
-from .validators import BankTransactionOwnerValidator
-
-
-class BaseBankTransactionSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = AbstractBankTransaction
-        fields = ('id', 'label', 'bankaccount', 'date', 'amount', 'currency',
-                  'status', 'reconciled', 'payment_method', 'memo', 'tag')
-        read_only_fields = ('bankaccount',)
-        extra_kwargs = {
-            'bankaccount': {'default': CurrentBankAccountDefault()},
-            'tag': {'validators': [BankTransactionTagOwnerValidator()]}
-        }
+from .models import AbstractTransaction, Transaction
 
 
-class BankTransactionSerializer(BaseBankTransactionSerializer):
-
-    class Meta(BaseBankTransactionSerializer.Meta):
-        model = BankTransaction
-        fields = BaseBankTransactionSerializer.Meta.fields + ('scheduled',)
-
-
-class BankTransactionDetailSerializer(serializers.ModelSerializer):
-    tag = BankTransactionTagOutputSerializer()
+class BaseTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = BankTransaction
-        fields = ('id', 'label', 'date', 'amount', 'status', 'reconciled',
-                  'payment_method', 'memo', 'tag', 'scheduled')
+        model = AbstractTransaction
+        fields = (
+            'id', 'label', 'date', 'amount', 'currency', 'status', 'reconciled',
+            'payment_method', 'memo', 'tag',
+        )
+
+    def save(self, **kwargs):
+        kwargs['account'] = get_default_account()
+        super().save(**kwargs)
+
+
+class TransactionSerializer(BaseTransactionSerializer):
+
+    class Meta(BaseTransactionSerializer.Meta):
+        model = Transaction
+        fields = BaseTransactionSerializer.Meta.fields + ('scheduled',)
+
+
+class TransactionDetailSerializer(TransactionSerializer):
+    tag = TagSerializer()
+
+    class Meta(TransactionSerializer.Meta):
+        model = Transaction
 
     def to_representation(self, instance):
-        ret = super(
-            BankTransactionDetailSerializer, self).to_representation(instance)
+        ret = super().to_representation(instance)
 
         ret['date_view'] = date_format(instance.date, 'SHORT_DATE_FORMAT')
         ret['amount_localized'] = localize_signed_amount(instance.amount)
@@ -62,19 +51,18 @@ class BankTransactionDetailSerializer(serializers.ModelSerializer):
         return ret
 
 
-class BankTransactionDetailExtraSerializer(BankTransactionDetailSerializer):
+class TransactionListSerializer(TransactionDetailSerializer):
     balance_total = serializers.DecimalField(max_digits=10, decimal_places=2)
     balance_reconciled = serializers.DecimalField(max_digits=10, decimal_places=2)
 
-    class Meta(BankTransactionDetailSerializer.Meta):
-        fields = (
-            BankTransactionDetailSerializer.Meta.fields + (
-                'balance_total', 'balance_reconciled')
+    class Meta(TransactionDetailSerializer.Meta):
+        fields = TransactionDetailSerializer.Meta.fields + (
+            'balance_total',
+            'balance_reconciled',
         )
 
     def to_representation(self, instance):
-        ret = super(
-            BankTransactionDetailExtraSerializer, self).to_representation(instance)
+        ret = super().to_representation(instance)
 
         fields = ('balance_total', 'balance_reconciled')
         for field in fields:
@@ -88,78 +76,30 @@ class BankTransactionDetailExtraSerializer(BankTransactionDetailSerializer):
         return ret
 
 
-class BankTransactionTeaserSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = BankTransaction
-        fields = ('id', 'label', 'date', 'amount', 'reconciled')
-        read_only_fields = list(fields)
-
-
-class BaseBankTransactionMultipleSerializer(serializers.ModelSerializer):
+class BaseTransactionMultipleSerializer(serializers.ModelSerializer):
     ids = serializers.PrimaryKeyRelatedField(
-        queryset=BankTransaction.objects.all(),
+        queryset=Transaction.objects.all(),
         many=True,
         allow_empty=False,
     )
 
     class Meta:
-        model = BankTransaction
+        model = Transaction
         fields = ('ids',)
-        # Unfortunetly, we cannot alter dynamically queryset on related fields.
-        # And validators are applied only to children (not parent many). But
-        # validators on children are not used, it use queryset instead...
-        validators = [BankTransactionOwnerValidator(field='ids')]
 
 
-class BankTransactionPartialUpdateMutipleSerializer(BaseBankTransactionMultipleSerializer):
-
-    class Meta(BaseBankTransactionMultipleSerializer.Meta):
+class TransactionPartialUpdateMutipleSerializer(BaseTransactionMultipleSerializer):
+    class Meta(BaseTransactionMultipleSerializer.Meta):
         fields = ('ids', 'status', 'reconciled')
 
 
-class BankTransactionDeleteMutipleSerializer(BaseBankTransactionMultipleSerializer):
+class TransactionDeleteMutipleSerializer(BaseTransactionMultipleSerializer):
     pass
 
 
-class BankTransactionEventInputSerializer(serializers.Serializer):
-    date_from = TimestampMillisecond()
-    date_to = TimestampMillisecond()
+class TransactionTeaserSerializer(serializers.ModelSerializer):
 
     class Meta:
-        validators = [MinMaxValidator('date_from', 'date_to')]
-
-
-class BankTransactionEventOutputSerializer(serializers.BaseSerializer):
-
-    def to_representation(self, instance):
-        timestamp_ms = time.mktime(instance.date.timetuple()) * 1000
-        return {
-            "id": instance.pk,
-            "url": self._context['request'].build_absolute_uri(
-                reverse('banktransactions:banktransaction-detail', kwargs={
-                    'pk': instance.pk,
-                }),
-            ),
-            "title": "{label}, {amount}".format(
-                label=instance.label,
-                amount=localize_signed_amount_currency(
-                    instance.amount,
-                    instance.currency,
-                ),
-            ),
-            "class": "event-important" if instance.amount < 0 else "event-success",
-            "start": timestamp_ms,
-            "end": timestamp_ms,
-            "extra_data": {
-                "label": instance.label,
-                "balance_total": instance.balance_total,
-                "balance_total_view": localize_signed_amount(
-                    instance.balance_total,
-                ) if instance.balance_total is not None else None,
-                "balance_reconciled": instance.balance_reconciled,
-                "balance_reconciled_view": localize_signed_amount(
-                    instance.balance_reconciled,
-                ) if instance.balance_reconciled is not None else None,
-            },
-        }
+        model = Transaction
+        fields = ('id', 'label', 'date', 'amount', 'reconciled')
+        read_only_fields = list(fields)

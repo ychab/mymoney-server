@@ -5,45 +5,42 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
-from mymoney.api.bankaccounts.models import BankAccount
-from mymoney.banktransactiontags import BankTransactionTag
+from mymoney.accounts.models import Account
 from mymoney.core.utils.dates import GRANULARITY_MONTH, get_date_ranges
+from mymoney.tags.models import Tag
 
 
-class BankTransactionManager(models.Manager):
+class TransactionManager(models.Manager):
 
-    def get_current_balance(self, bankaccount):
-
+    def get_current_balance(self, account):
         # Get futur balance instead for performance.
         futur_balance = (
             self
-            .filter(bankaccount=bankaccount)
-            .exclude(status=BankTransaction.STATUS_INACTIVE)
+            .filter(account=account)
+            .exclude(status=Transaction.STATUS_INACTIVE)
             .filter(date__gt=date.today())
             .aggregate(models.Sum('amount'))
         )['amount__sum'] or 0
 
         # Returns difference between total balance and future balance which is
         # finally the current balance.
-        return Decimal(bankaccount.balance - futur_balance)
+        return Decimal(account.balance - futur_balance)
 
-    def get_reconciled_balance(self, bankaccount):
-
+    def get_reconciled_balance(self, account):
         # Get non reconciled sum instead of sum of reconciled bank
         # transactions. By assuming that most of the bank transactions are
         # reconciled, it should be better for performance.
         total_not_reconciled = (
             self
-            .filter(bankaccount=bankaccount)
+            .filter(account=account)
             .filter(reconciled=False)
-            .exclude(status=BankTransaction.STATUS_INACTIVE)
+            .exclude(status=Transaction.STATUS_INACTIVE)
             .aggregate(models.Sum('amount'))
         )['amount__sum'] or 0
 
-        return Decimal(bankaccount.balance - total_not_reconciled)
+        return Decimal(account.balance - total_not_reconciled)
 
-    def get_total_unscheduled_period(self, bankaccount,
-                                     granularity=GRANULARITY_MONTH):
+    def get_total_unscheduled_period(self, account, granularity=GRANULARITY_MONTH):
         """
         Returns the total sum for the current period of bank transactions not
         scheduled.
@@ -51,24 +48,20 @@ class BankTransactionManager(models.Manager):
         return (
             self
             .filter(
-                bankaccount=bankaccount,
+                account=account,
                 date__range=get_date_ranges(timezone.now(), granularity),
                 scheduled=False,
             )
-            .exclude(status=BankTransaction.STATUS_INACTIVE)
+            .exclude(status=Transaction.STATUS_INACTIVE)
             .aggregate(total=models.Sum('amount'))
         )['total'] or 0
 
 
-class AbstractBankTransaction(models.Model):
-    """
-    Abtract class for bank transactions.
-    """
+class AbstractTransaction(models.Model):
 
     STATUS_ACTIVE = 'active'
     STATUS_IGNORED = 'ignored'
     STATUS_INACTIVE = 'inactive'
-
     STATUSES = (
         (STATUS_ACTIVE, _('Active')),
         (STATUS_IGNORED, _('Ignored')),
@@ -80,7 +73,6 @@ class AbstractBankTransaction(models.Model):
     PAYMENT_METHOD_TRANSFER = 'transfer'
     PAYMENT_METHOD_TRANSFER_INTERNAL = 'transfer_internal'
     PAYMENT_METHOD_CHECK = 'check'
-
     PAYMENT_METHODS = (
         (PAYMENT_METHOD_CREDIT_CARD, _('Credit card')),
         (PAYMENT_METHOD_CASH, _('Cash')),
@@ -90,8 +82,8 @@ class AbstractBankTransaction(models.Model):
     )
 
     label = models.CharField(max_length=255, verbose_name=_('Label'))
-    bankaccount = models.ForeignKey(
-        BankAccount,
+    account = models.ForeignKey(
+        Account,
         related_name='%(class)ss',
         on_delete=models.CASCADE,
     )
@@ -129,7 +121,7 @@ class AbstractBankTransaction(models.Model):
     )
     memo = models.TextField(blank=True, verbose_name=_('Memo'))
     tag = models.ForeignKey(
-        BankTransactionTag,
+        Tag,
         blank=True,
         null=True,
         on_delete=models.SET_NULL,
@@ -144,62 +136,60 @@ class AbstractBankTransaction(models.Model):
         return self.label
 
     def save(self, *args, **kwargs):
-        self.currency = self.bankaccount.currency
-        super(AbstractBankTransaction, self).save(*args, **kwargs)
+        self.currency = self.account.currency
+        super().save(*args, **kwargs)
 
 
-class BankTransaction(AbstractBankTransaction):
+class Transaction(AbstractTransaction):
 
     scheduled = models.BooleanField(default=False, editable=False)
 
-    objects = BankTransactionManager()
+    objects = TransactionManager()
 
     class Meta:
-        db_table = 'banktransactions'
-        index_together = [
-            ["bankaccount", "amount"],
-            ["bankaccount", "date"],
-            ["bankaccount", "reconciled"],
+        db_table = 'transactions'
+        indexes = [
+            models.Index(fields=['amount', 'date', 'reconciled']),
         ]
         get_latest_by = "date"
 
     def save(self, *args, **kwargs):
 
         if self.status == self.STATUS_INACTIVE:
-            super(BankTransaction, self).save(*args, **kwargs)
+            super().save(*args, **kwargs)
             return
 
         amount = Decimal(self.amount)
         if self.pk is not None:
             # Deduce previous value if updated.
-            amount -= Decimal(BankTransaction.objects.get(pk=self.pk).amount)
+            amount -= Decimal(Transaction.objects.get(pk=self.pk).amount)
 
         # Update bank account balance.
         try:
             with transaction.atomic():
-                super(BankTransaction, self).save(*args, **kwargs)
+                super().save(*args, **kwargs)
 
-                self.bankaccount.balance = models.F('balance') + amount
-                self.bankaccount.save(update_fields=['balance'])
+                self.account.balance = models.F('balance') + amount
+                self.account.save(update_fields=['balance'])
         finally:
             # Reload it to replace F expression of instance attribute.
-            self.bankaccount.refresh_from_db(fields=['balance'])
+            self.account.refresh_from_db(fields=['balance'])
 
     def delete(self, *args, **kwargs):
 
         if self.status == self.STATUS_INACTIVE:
-            super(BankTransaction, self).delete(*args, **kwargs)
+            super().delete(*args, **kwargs)
             return
 
         # Update bank account balance.
         try:
             with transaction.atomic():
-                super(BankTransaction, self).delete(*args, **kwargs)
+                super().delete(*args, **kwargs)
 
-                self.bankaccount.balance = (
+                self.account.balance = (
                     models.F('balance') - Decimal(self.amount)
                 )
 
-                self.bankaccount.save()
+                self.account.save()
         finally:
-            self.bankaccount.refresh_from_db(fields=['balance'])
+            self.account.refresh_from_db(fields=['balance'])

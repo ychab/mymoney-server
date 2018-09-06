@@ -3,13 +3,13 @@ language: python
 python:
     - "3.6"
 addons:
-    postgresql: "9.4"
+    postgresql: "9.6"
 env:
     - TOXENV=codestyle
     - TOXENV=sort
     - TOXENV=docs
     - TOXENV=py36-reverse
-    - TOXENV=py36-coverage
+    - TOXENV=py36-report
 install:
     - pip install coveralls tox
 before_script:
@@ -18,6 +18,7 @@ before_script:
     - cp mymoney/settings/local.py.dist mymoney/settings/local.py
     - sed -i 's/<DB_NAME>/mymoney/g' mymoney/settings/local.py
     - sed -i 's/<DB_USER>/mymoney/g' mymoney/settings/local.py
+    - sed -i 's/<SECRET_KEY>/test-test-test/g' mymoney/settings/local.py
 script:
     - tox
 after_success:

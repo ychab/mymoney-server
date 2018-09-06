@@ -1,0 +1,39 @@
+#####
+# All
+#####
+
+SECRET_KEY = '<SECRET_KEY>'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': '<DB_NAME>',
+        'USER': '<DB_USER>',
+        'PASSWORD': '',
+        'HOST': '',
+        'PORT': '',
+    }
+}
+
+# LANGUAGE_CODE = '<LANGUAGE_CODE>'  # For e.g 'fr-fr'
+
+############
+# Production
+############
+
+# ALLOWED_HOSTS = []
+# ADMINS = ()
+
+# STATIC_ROOT = ''
+# MEDIA_ROOT = ''
+
+# DEFAULT_FROM_EMAIL = ''
+# EMAIL_HOST = ''
+# EMAIL_PORT = ''
+# EMAIL_HOST_USER = ''
+# EMAIL_HOST_PASSWORD = ''
+
+# For Django back-office, enable SSL if needed
+# CSRF_COOKIE_SECURE = True
+# SESSION_COOKIE_SECURE = True
+# SECURE_SSL_REDIRECT = True  # Just in case, should be done by webserver instead

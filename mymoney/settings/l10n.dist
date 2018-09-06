@@ -1,9 +1,0 @@
-from .base import *
-
-LANGUAGE_CODE = '<LANGUAGE_CODE>'
-
-REST_FRAMEWORK['DATE_INPUT_FORMATS'] = ('%Y-%m-%d',)
-
-# Be sure to set it to True only if you have an available minify file generated
-# with gulp at : mymoney/static/dist/translations/mymoney.min.lang.<LANGUAGE_CODE>.js
-MYMONEY['USE_L10N_DIST'] = False

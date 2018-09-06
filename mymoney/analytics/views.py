@@ -1,30 +1,25 @@
-from django.db.models import Count, Max, Min, Sum
+from django.db.models import Count, Sum
 from django.utils.functional import cached_property
 
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from mymoney.api.bankaccounts.mixins import BankAccountContext
-from mymoney.banktransactions import BankTransaction
-from mymoney.banktransactions import (
-    BankTransactionDetailSerializer, BankTransactionTeaserSerializer,
-)
-from mymoney.core.iterators import DateIterator
-from mymoney.core.paginators import DatePaginator
-from mymoney.core.utils.dates import get_date_ranges
+from mymoney.core.utils import get_default_account
+from mymoney.transactions.models import Transaction
+from mymoney.transactions.serializers import TransactionTeaserSerializer
 
 from .serializers import (
     RatioInputSerializer, RatioOutputSerializer, RatioSummaryInputSerializer,
-    TrendTimeInputSerializer, TrendTimeOuputSerializer,
 )
 
 
-class RatioAnalyticsViewSet(BankAccountContext, GenericViewSet):
+class RatioAnalyticsViewSet(GenericViewSet):
 
     def __init__(self, *args, **kwargs):
-        super(RatioAnalyticsViewSet, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.filters = []
+        self.account = get_default_account()
 
     def list(self, request, *args, **kwargs):
         serializer = RatioInputSerializer(
@@ -51,7 +46,7 @@ class RatioAnalyticsViewSet(BankAccountContext, GenericViewSet):
             'total': total,
         })
 
-    @list_route(['get'])
+    @action(methods=['get'], detail=False)
     def summary(self, request, *args, **kwargs):
         serializer = RatioSummaryInputSerializer(
             data=request.query_params, context={'request': request})
@@ -68,21 +63,21 @@ class RatioAnalyticsViewSet(BankAccountContext, GenericViewSet):
         qs = qs.order_by('date', 'id')
 
         instances, total = [], 0
-        for banktransaction in qs:
-            instances.append(banktransaction)
-            total += banktransaction.amount
+        for transaction in qs:
+            instances.append(transaction)
+            total += transaction.amount
 
         return Response({
-            'results': BankTransactionTeaserSerializer(instances, many=True).data,
+            'results': TransactionTeaserSerializer(instances, many=True).data,
             'total': total,
         })
 
     @property
     def base_queryset(self):
 
-        qs = BankTransaction.objects.filter(
-            bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_ACTIVE,
+        qs = Transaction.objects.filter(
+            account=self.account,
+            status=Transaction.STATUS_ACTIVE,
             date__range=(self.filters['date_start'], self.filters['date_end']),
         )
 
@@ -148,142 +143,5 @@ class RatioAnalyticsViewSet(BankAccountContext, GenericViewSet):
             qs = qs.order_by('sum')
         else:
             qs = qs.order_by('-sum')
-
-        return qs
-
-
-class TrendTimeAnalyticsViewSet(BankAccountContext, GenericViewSet):
-
-    def __init__(self, *args, **kwargs):
-        super(TrendTimeAnalyticsViewSet, self).__init__(*args, **kwargs)
-        self.filters = []
-
-    def list(self, request, *args, **kwargs):
-        serializer = TrendTimeInputSerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        self.filters = serializer.validated_data
-
-        results, links = [], {}
-
-        # Get first and last bank transaction to prevent infinite pager. If
-        # one is missing, it just mean that there is no data at all.
-        first, last = self.get_queryset_dates_delimiters()
-        if first and last:
-            base_date = self.filters['date']
-            granularity = self.filters['granularity']
-
-            # Requested date is out of range?
-            first_range = get_date_ranges(first, granularity)[0]
-            last_range = get_date_ranges(last, granularity)[1]
-            if first_range <= base_date <= last_range:
-
-                date_start, date_end = get_date_ranges(
-                    base_date,
-                    granularity,
-                )
-
-                balance = self.get_queryset_balance(date_start)['sum'] or 0
-                balance += self.bankaccount.balance_initial
-
-                items_qs = self.get_queryset_items(date_start, date_end)
-                items = {item['date']: item for item in items_qs}
-
-                # Start and end iterator at first/last bank transaction,
-                # not the range calculated.
-                iterator = DateIterator(
-                    first if first > date_start else date_start,
-                    last if last < date_end else date_end,
-                )
-                instances = []
-                for date_step in iterator:
-                    delta = percentage = count = 0
-
-                    # If no new bank transaction, same as previous.
-                    if date_step in items:
-                        delta = items[date_step]['sum']
-                        percentage = (delta * 100 / balance) if balance else 0
-                        balance += items[date_step]['sum']
-                        count = items[date_step]['count']
-
-                    instances.append({
-                        'date': date_step,
-                        'count': count,
-                        'delta': delta,
-                        'balance': balance,
-                        'percentage': percentage,
-                    })
-
-                results = TrendTimeOuputSerializer(instances, many=True).data
-                paginator = DatePaginator(first_range, last_range, granularity)
-                links = paginator.get_links(base_date, request)
-
-        return Response({
-            'results': results,
-            'previous': links.get('previous'),
-            'next': links.get('next'),
-        })
-
-    @list_route(['get'])
-    def summary(self, request, *args, **kwargs):
-        serializer = TrendTimeInputSerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
-        self.filters = serializer.validated_data
-
-        qs = (
-            self.base_queryset
-            .filter(date=serializer.data['date'])
-            .select_related('tag')
-            .order_by('pk')
-        )
-
-        total = 0
-        for banktransaction in qs:
-            total += banktransaction.amount
-
-        return Response({
-            'results': BankTransactionDetailSerializer(qs, many=True).data,
-            'total': total,
-        })
-
-    @cached_property
-    def base_queryset(self):
-
-        qs = BankTransaction.objects.filter(
-            bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_ACTIVE,
-        )
-
-        if 'reconciled' in self.filters:
-            qs = qs.filter(reconciled=self.filters['reconciled'])
-
-        return qs
-
-    def get_queryset_dates_delimiters(self):
-
-        dates = self.base_queryset.aggregate(
-            first=Min('date'),
-            last=Max('date'),
-        )
-        return dates['first'], dates['last']
-
-    def get_queryset_balance(self, date_start):
-
-        qs = self.base_queryset.filter(
-            date__lt=date_start,
-        ).aggregate(
-            sum=Sum('amount')
-        )
-
-        return qs
-
-    def get_queryset_items(self, date_start, date_end):
-
-        qs = self.base_queryset.filter(
-            date__range=(date_start, date_end),
-        )
-
-        qs = qs.values('date')
-        qs = qs.annotate(sum=Sum('amount'), count=Count('id'))
-        qs = qs.order_by('date')
 
         return qs

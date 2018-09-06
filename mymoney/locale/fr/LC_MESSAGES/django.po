@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2015-11-06 19:54+0000\n"
+"POT-Creation-Date: 2018-09-09 09:17+0000\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,258 +18,154 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=(n > 1);\n"
 
-#: api/bankaccounts/models.py:19 api/banktransactions/models.py:92
+#: mymoney/accounts/models.py:11 mymoney/transactions/models.py:84
 msgid "Label"
 msgstr "Libellé"
 
-#: api/bankaccounts/models.py:24
+#: mymoney/accounts/models.py:16
 msgid "Balance"
 msgstr "Solde"
 
-#: api/bankaccounts/models.py:30
-msgid "Initial balance"
-msgstr "Solde initial"
-
-#: api/bankaccounts/models.py:31
-msgid "Initial balance will automatically update the balance."
-msgstr "Le solde initial va automatiquement mettre à jour le solde."
-
-#: api/bankaccounts/models.py:36 api/banktransactions/models.py:105
+#: mymoney/accounts/models.py:21 mymoney/transactions/models.py:98
 msgid "Currency"
 msgstr "Devise"
 
-#: api/bankaccounts/models.py:41
-msgid "Owners"
-msgstr "Propriétaires"
-
-#: api/banktransactionanalytics/serializers.py:22
+#: mymoney/analytics/serializers.py:17
 msgid "Sum"
 msgstr "Somme"
 
-#: api/banktransactionanalytics/serializers.py:23
-#: api/banktransactionanalytics/serializers.py:27
+#: mymoney/analytics/serializers.py:18 mymoney/analytics/serializers.py:22
 msgid "Expenses"
 msgstr "Dépenses"
 
-#: api/banktransactionanalytics/serializers.py:24
-#: api/banktransactionanalytics/serializers.py:28
+#: mymoney/analytics/serializers.py:19 mymoney/analytics/serializers.py:23
 msgid "Income"
 msgstr "Revenus"
 
-#: api/banktransactionanalytics/serializers.py:26
+#: mymoney/analytics/serializers.py:21
 msgid "Single"
 msgstr "Unique"
 
-#: api/banktransactionanalytics/serializers.py:99
-msgid "Week"
-msgstr "Hebdomadaire"
+#: mymoney/core/validators.py:17
+msgid "Min field must be lower or equals to max field."
+msgstr "Le champ minimum doit être inférieur ou égal au champ supérieur."
 
-#: api/banktransactionanalytics/serializers.py:100
-msgid "Month"
-msgstr "Mensuel"
-
-#: api/banktransactions/models.py:73
-msgid "Active"
-msgstr "Actif"
-
-#: api/banktransactions/models.py:74
-msgid "Ignored"
-msgstr "Ignoré"
-
-#: api/banktransactions/models.py:75
-msgid "Inactive"
-msgstr "Inactif"
-
-#: api/banktransactions/models.py:85
-msgid "Credit card"
-msgstr "Carte de crédit"
-
-#: api/banktransactions/models.py:86
-msgid "Cash"
-msgstr "Espèce"
-
-#: api/banktransactions/models.py:87
-msgid "Transfer"
-msgstr "Virement"
-
-#: api/banktransactions/models.py:88
-msgid "Transfer internal"
-msgstr "Virement interne"
-
-#: api/banktransactions/models.py:89
-msgid "Check"
-msgstr "Chèque"
-
-#: api/banktransactions/models.py:97
-msgid "Date"
-msgstr "Date"
-
-#: api/banktransactions/models.py:101
-msgid "Amount"
-msgstr "Montant"
-
-#: api/banktransactions/models.py:112
-msgid "Status"
-msgstr "Statut"
-
-#: api/banktransactions/models.py:113
-msgid ""
-"Depending on its value, determine whether it could alter the bank account "
-"balance or being used by statistics."
-msgstr ""
-"En fonction de la valeur, indique si cela peut modifier le solde du compte "
-"bancaire ou être pris en compte pour les statistiques."
-
-#: api/banktransactions/models.py:119
-msgid "Reconciled"
-msgstr "Pointé"
-
-#: api/banktransactions/models.py:120
-msgid "Whether the bank transaction has been applied on the real bank account."
-msgstr ""
-"Le statut de la transaction bancaire peut être utilisé  pour déterminer si "
-"le solde du compte bancaire doit être modifié."
-
-#: api/banktransactions/models.py:127
-msgid "Payment method"
-msgstr "Méthode de paiement"
-
-#: api/banktransactions/models.py:129
-msgid "Memo"
-msgstr "Mémo"
-
-#: api/banktransactions/models.py:135
-msgid "Tag"
-msgstr "Étiquettes"
-
-#: api/banktransactions/validators.py:27
-msgid "The bulk limit of {max} is exceed."
-msgstr "La limit de masse de {max} a été excédée."
-
-#: api/banktransactions/validators.py:38
-msgid "Some bank transaction are invalid."
-msgstr "Les transactions bancaires pointées ont été annulées."
-
-#: api/banktransactionschedulers/models.py:83
+#: mymoney/schedulers/models.py:77
 msgid "Monthly"
 msgstr "Mensuel"
 
-#: api/banktransactionschedulers/models.py:84
+#: mymoney/schedulers/models.py:78
 msgid "Weekly"
 msgstr "Hebdomadaire"
 
-#: api/banktransactionschedulers/models.py:91
+#: mymoney/schedulers/models.py:85
 msgid "Waiting"
 msgstr "En attente"
 
-#: api/banktransactionschedulers/models.py:92
+#: mymoney/schedulers/models.py:86
 msgid "Finished"
-msgstr "Fini"
+msgstr "Terminé"
 
-#: api/banktransactionschedulers/models.py:93
+#: mymoney/schedulers/models.py:87
 msgid "Failed"
 msgstr "Échoué"
 
-#: api/banktransactionschedulers/models.py:100
+#: mymoney/schedulers/models.py:94
 msgid "Type"
 msgstr "Type"
 
-#: api/banktransactionschedulers/models.py:101
+#: mymoney/schedulers/models.py:95
 msgid "The type of recurrence to be applied."
-msgstr "Le type de récurrence a appliquer."
+msgstr "Le type de récurrence a appliquer"
 
-#: api/banktransactionschedulers/models.py:106
+#: mymoney/schedulers/models.py:100
 msgid "Recurrence"
 msgstr "Récurrence"
 
-#: api/banktransactionschedulers/models.py:107
+#: mymoney/schedulers/models.py:101
 msgid "How many time the bank transaction should be cloned."
 msgstr "Combien de fois la transaction bancaire doit être dupliquée."
 
-#: api/banktransactionschedulers/models.py:112
+#: mymoney/schedulers/models.py:106
 msgid "Last time the scheduled bank transaction has been cloned."
-msgstr "La dernière fois que la transaction bancaire a été dupliquée."
+msgstr "La dernière fois que la transaction bancaire a été clonée."
 
-#: api/banktransactionschedulers/models.py:120
+#: mymoney/schedulers/models.py:114
 msgid "State of the scheduled bank transaction."
-msgstr "État de la transaction bancaire."
+msgstr "Statut de la transaction bancaire planifiée."
 
-#: api/banktransactiontags/models.py:43
+#: mymoney/tags/models.py:6
 msgid "Name"
 msgstr "Nom"
 
-#: api/banktransactiontags/validators.py:30
-msgid "You are not owner of the bank transaction tag."
-msgstr "État de la transaction bancaire."
+#: mymoney/transactions/models.py:66
+msgid "Active"
+msgstr "Actif"
 
-#: api/banktransactiontags/validators.py:48
-msgid "You are not owner of all bank transaction tags."
-msgstr "Vous n'êtes pas propriétaire de toutes les étiquettes bancaires."
+#: mymoney/transactions/models.py:67
+msgid "Ignored"
+msgstr "Ignoré"
 
-#: core/management/commands/demo.py:76
-msgid "Current account"
-msgstr "Compte courant"
+#: mymoney/transactions/models.py:68
+msgid "Inactive"
+msgstr "Inactif"
 
-#: core/management/commands/demo.py:83 core/management/commands/demo.py:93
-msgid "Rent"
-msgstr "Loyer"
+#: mymoney/transactions/models.py:77
+msgid "Credit card"
+msgstr "Carte de crédit"
 
-#: core/management/commands/demo.py:84
-msgid "Shopping"
-msgstr "Course"
+#: mymoney/transactions/models.py:78
+msgid "Cash"
+msgstr "Espèce"
 
-#: core/management/commands/demo.py:85
-msgid "Car"
-msgstr "Voiture"
+#: mymoney/transactions/models.py:79
+msgid "Transfer"
+msgstr "Transfert"
 
-#: core/management/commands/demo.py:86
-msgid "Tax"
-msgstr "Impôt"
+#: mymoney/transactions/models.py:80
+msgid "Transfer internal"
+msgstr "Transfert interne"
 
-#: core/management/commands/demo.py:87
-msgid "Restaurant"
-msgstr "Restaurant"
+#: mymoney/transactions/models.py:81
+msgid "Check"
+msgstr "Chèque"
 
-#: core/management/commands/demo.py:104
-msgid "Council tax"
-msgstr "Taxe d'habitation"
+#: mymoney/transactions/models.py:90
+msgid "Date"
+msgstr "Date"
 
-#: core/management/commands/demo.py:115
-msgid "Wages"
-msgstr "Salaires"
+#: mymoney/transactions/models.py:94
+msgid "Amount"
+msgstr "Montant"
 
-#: core/management/commands/demo.py:126
-msgid "Internal transfer"
-msgstr "Virement interne"
+#: mymoney/transactions/models.py:105
+msgid "Status"
+msgstr "Statut"
 
-#: core/management/commands/demo.py:138
-msgid "Scratch ticket"
-msgstr "Jeux à gratter"
+#: mymoney/transactions/models.py:106
+msgid ""
+"Depending on its value, determine whether it could alter the bank account "
+"balance or being used by statistics."
+msgstr "En fonction de sa valeur, détermine si il peut changer le solde du "
+"compte bancaire et être utilisée comme une statistique."
 
-#: core/management/commands/demo.py:149
-msgid "New tires"
-msgstr "Nouveaux pneus"
+#: mymoney/transactions/models.py:112
+msgid "Reconciled"
+msgstr "Pointé"
 
-#: core/management/commands/demo.py:160
-msgid "Bad stuff"
-msgstr "Mauvais truc"
+#: mymoney/transactions/models.py:113
+msgid "Whether the bank transaction has been applied on the real bank account."
+msgstr "Détermine si la transaction bancaire a été réellement effectuée sur le "
+"compte bancaire."
 
-#: core/management/commands/demo.py:170
-msgid "Refund"
-msgstr "Remboursement"
+#: mymoney/transactions/models.py:120
+msgid "Payment method"
+msgstr "Moyen de paiement"
 
-#: core/management/commands/demo.py:191
-msgid "Something"
-msgstr "Quelque chose"
+#: mymoney/transactions/models.py:122
+msgid "Memo"
+msgstr "Note"
 
-#: core/serializers.py:26
-msgid "Invalid username or password."
-msgstr "Nom d'utilisateur ou mot de passe invalides."
-
-#: core/serializers.py:29
-msgid "Your account is not active."
-msgstr "Votre compte utilisateur est inactif."
-
-#: core/validators.py:17
-msgid "Min field must be lower or equals to max field."
-msgstr "Le champ minimum doit être inférieur ou égal aux champs maximum."
+#: mymoney/transactions/models.py:128
+msgid "Tag"
+msgstr "Étiquette"

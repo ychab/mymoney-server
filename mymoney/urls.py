@@ -4,28 +4,26 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import path
 
+from rest_framework.authtoken.views import obtain_auth_token
 from rest_framework.routers import DefaultRouter
 from rest_framework_swagger.views import get_swagger_view
 
-from mymoney.banktransactionanalytics.views import RatioAnalyticsViewSet
-from mymoney.banktransactions.views import BankTransactionViewSet
-from mymoney.banktransactionschedulers import BankTransactionSchedulerViewSet
-from mymoney.banktransactiontags import BankTransactionTagViewSet
-from mymoney.api.users.views import LoginAPIView, LogoutAPIView
+from mymoney.analytics.views import RatioAnalyticsViewSet
 from mymoney.core.views import ConfigAPIView
+from mymoney.schedulers.views import SchedulerViewSet
+from mymoney.tags.views import TagViewSet
+from mymoney.transactions.views import TransactionViewSet
 
 router = DefaultRouter()
-router.register(r'transactions', BankTransactionViewSet, base_name='transaction')
-router.register(r'tags', BankTransactionTagViewSet, base_name='tag')
-router.register(r'schedulers', BankTransactionSchedulerViewSet, base_name='scheduler')
-router.register(r'analytics', RatioAnalyticsViewSet, base_name='analytic')
+router.register(r'analytics', RatioAnalyticsViewSet, base_name='analytics-ratio')
+router.register(r'schedulers', SchedulerViewSet, base_name='scheduler')
+router.register(r'tags', TagViewSet, base_name='tag')
+router.register(r'transactions', TransactionViewSet, base_name='transaction')
 
 api_urls = router.urls
 api_urls += [
     path('config/', ConfigAPIView.as_view(), name='config'),
-    # path('auth-token', obtain_auth_token, name='obtain_token'),
-    path('login/', LoginAPIView.as_view(), name='login'),
-    path('logout/', LogoutAPIView.as_view(), name='logout'),
+    path('auth-token', obtain_auth_token, name='obtain_token'),
 ]
 
 urlpatterns = [

@@ -1,64 +1,55 @@
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter
-from rest_framework.mixins import (
-    CreateModelMixin, DestroyModelMixin, ListModelMixin, UpdateModelMixin,
-)
-from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
-from rest_framework.viewsets import GenericViewSet
+from rest_framework.viewsets import ModelViewSet
 
-from mymoney.api.bankaccounts.mixins import BankAccountContext
-from mymoney.api.bankaccounts.permissions import IsBankAccountOwner
-from mymoney.banktransactions import BankTransaction
+from mymoney.core.utils import get_default_account
 from mymoney.core.utils.dates import GRANULARITY_MONTH, GRANULARITY_WEEK
+from mymoney.transactions.models import Transaction
 
-from .models import BankTransactionScheduler
-from .serializers import (
-    BankTransactionSchedulerCreateSerializer,
-    BankTransactionSchedulerSerializer,
-)
+from .models import Scheduler
+from .serializers import SchedulerCreateSerializer, SchedulerSerializer
 
 
-class BankTransactionSchedulerViewSet(BankAccountContext, CreateModelMixin,
-                                      UpdateModelMixin, DestroyModelMixin,
-                                      ListModelMixin, GenericViewSet):
-
-    model = BankTransactionScheduler
-    queryset = BankTransactionScheduler.objects.all()
-    permission_classes = (IsBankAccountOwner, DjangoModelPermissions)
+class SchedulerViewSet(ModelViewSet):
     filter_backends = (OrderingFilter,)
     ordering = ('-last_action', 'type', '-id')
 
+    def get_queryset(self):
+        return Scheduler.objects.filter(account=get_default_account())
+
     def get_serializer_class(self):
         if self.action == 'create':
-            return BankTransactionSchedulerCreateSerializer
-        return BankTransactionSchedulerSerializer
+            return SchedulerCreateSerializer
+        return SchedulerSerializer
 
-    @list_route(['get'])
+    @action(methods=['get'], detail=False)
     def summary(self, request, *args, **kwargs):
+        account = get_default_account()
+
         total_types = {
-            'debit': BankTransactionScheduler.objects.get_total_debit(self.bankaccount),
-            'credit': BankTransactionScheduler.objects.get_total_credit(self.bankaccount),
+            'debit': Scheduler.objects.get_total_debit(account),
+            'credit': Scheduler.objects.get_total_credit(account),
         }
 
         summary = {}
         total = 0
-        for bts_type in BankTransactionScheduler.TYPES:
-            key = bts_type[0]
+        for s_type in Scheduler.TYPES:
+            key = s_type[0]
             if key in total_types['debit'] or key in total_types['credit']:
 
-                if key == BankTransactionScheduler.TYPE_WEEKLY:
+                if key == Scheduler.TYPE_WEEKLY:
                     granularity = GRANULARITY_WEEK
                 else:
                     granularity = GRANULARITY_MONTH
 
                 total_credit = total_types['credit'].get(key, 0)
                 total_debit = total_types['debit'].get(key, 0)
-                used = BankTransaction.objects.get_total_unscheduled_period(
-                    self.bankaccount, granularity) or 0
+                used = Transaction.objects.get_total_unscheduled_period(
+                    account, granularity) or 0
 
                 summary[key] = {
-                    'title': bts_type[1],
+                    'title': s_type[1],
                     'credit': total_credit,
                     'debit': total_debit,
                     'used': used,

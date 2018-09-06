@@ -8,44 +8,28 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
-from mymoney.banktransactions.factories import BankTransactionFactory
-from mymoney.banktransactions import BankTransaction
-from mymoney.banktransactiontags import BankTransactionTagFactory
-from mymoney.api.users.factories import UserFactory
+from mymoney.accounts.factories import AccountFactory
+from mymoney.core.factories import UserFactory
+from mymoney.tags.factories import TagFactory
+from mymoney.transactions.factories import TransactionFactory
+from mymoney.transactions.models import Transaction
 
-from ..factories import BankTransactionSchedulerFactory
-from ..models import BankTransactionScheduler
+from ..factories import SchedulerFactory
+from ..models import Scheduler
 
 
 class CreateViewTestCase(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = UserFactory(user_permissions='all')
-        cls.bankaccount = BankAccountFactory(currency='USD', owners=[cls.user])
-        cls.url = reverse(
-            'banktransactionschedulers:banktransactionscheduler-list', kwargs={
-                'bankaccount_pk': cls.bankaccount.pk,
-            }
-        )
+        cls.user = UserFactory()
+        cls.account = AccountFactory(currency='USD')
+        cls.url = reverse('scheduler-list')
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
         response = self.client.post(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_without_permission(self):
-        user = UserFactory()
-        self.client.force_authenticate(user)
-        response = self.client.post(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_not_owner_with_permissions(self):
-        user = UserFactory(user_permissions='all')
-        self.client.force_authenticate(user)
-        response = self.client.post(self.url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
     def test_access_granted(self):
         self.client.force_authenticate(self.user)
@@ -60,16 +44,16 @@ class CreateViewTestCase(APITestCase):
         self.assertEqual(response.status_code, 400)
         self.assertIn('label', response.data)
 
-    def test_bankaccount_default(self):
+    def test_account_default(self):
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={
             'label': 'foo',
             'amount': 10,
-            'bankaccount': BankAccountFactory().pk,
+            'account': AccountFactory().pk,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.bankaccount, self.bankaccount)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.account, self.account)
 
     def test_date_default(self):
         self.client.force_authenticate(self.user)
@@ -78,8 +62,8 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.date, datetime.date.today())
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.date, datetime.date.today())
 
     def test_amount_required(self):
         self.client.force_authenticate(self.user)
@@ -97,9 +81,9 @@ class CreateViewTestCase(APITestCase):
             'currency': 'EUR',
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertNotEqual(bts.currency, 'EUR')
-        self.assertEqual(bts.currency, self.bankaccount.currency)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertNotEqual(scheduler.currency, 'EUR')
+        self.assertEqual(scheduler.currency, self.account.currency)
 
     def test_status_default(self):
         self.client.force_authenticate(self.user)
@@ -108,8 +92,8 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.status, BankTransactionScheduler.STATUS_ACTIVE)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.status, Scheduler.STATUS_ACTIVE)
 
     def test_reconciled_not_editable(self):
         self.client.force_authenticate(self.user)
@@ -119,8 +103,8 @@ class CreateViewTestCase(APITestCase):
             'reconciled': True,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertFalse(bts.reconciled)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertFalse(scheduler.reconciled)
 
     def test_payment_method_default(self):
         self.client.force_authenticate(self.user)
@@ -129,10 +113,10 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
         self.assertEqual(
-            bts.payment_method,
-            BankTransactionScheduler.PAYMENT_METHOD_CREDIT_CARD,
+            scheduler.payment_method,
+            Scheduler.PAYMENT_METHOD_CREDIT_CARD,
         )
 
     def test_memo_blank(self):
@@ -142,8 +126,8 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.memo, '')
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.memo, '')
 
     def test_tag_none(self):
         self.client.force_authenticate(self.user)
@@ -152,23 +136,11 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertIsNone(bts.tag)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertIsNone(scheduler.tag)
 
-    def test_tag_not_owner(self):
-        tag = BankTransactionTagFactory()
-
-        self.client.force_authenticate(self.user)
-        response = self.client.post(self.url, data={
-            'label': 'foo',
-            'amount': -10,
-            'tag': tag.pk,
-        })
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('tag', response.data)
-
-    def test_tag_owner(self):
-        tag = BankTransactionTagFactory(owner=self.user)
+    def test_tag(self):
+        tag = TagFactory()
 
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={
@@ -177,23 +149,8 @@ class CreateViewTestCase(APITestCase):
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.tag, tag)
-
-    def test_tag_owner_by_relationship(self):
-        user = UserFactory()
-        self.bankaccount.owners.add(user)
-        tag = BankTransactionTagFactory(owner=user)
-
-        self.client.force_authenticate(self.user)
-        response = self.client.post(self.url, data={
-            'label': 'foo',
-            'amount': -10,
-            'tag': tag.pk,
-        })
-        self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.tag, tag)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.tag, tag)
 
     def test_type_default(self):
         self.client.force_authenticate(self.user)
@@ -202,10 +159,10 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
         self.assertEqual(
-            bts.type,
-            BankTransactionScheduler.TYPE_MONTHLY,
+            scheduler.type,
+            Scheduler.TYPE_MONTHLY,
         )
 
     def test_recurrence_default(self):
@@ -215,8 +172,8 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertIsNone(bts.recurrence)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertIsNone(scheduler.recurrence)
 
     def test_last_action_not_editable(self):
         self.client.force_authenticate(self.user)
@@ -226,53 +183,53 @@ class CreateViewTestCase(APITestCase):
             'last_action': timezone.now(),
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertIsNone(bts.last_action)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertIsNone(scheduler.last_action)
 
     def test_state_not_editable(self):
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={
             'label': 'foo',
             'amount': 10,
-            'state': BankTransactionScheduler.STATE_FINISHED,
+            'state': Scheduler.STATE_FINISHED,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
         self.assertEqual(
-            bts.state,
-            BankTransactionScheduler.STATE_WAITING,
+            scheduler.state,
+            Scheduler.STATE_WAITING,
         )
 
     def test_create(self):
-        tag = BankTransactionTagFactory(owner=self.user)
+        tag = TagFactory()
 
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={
             'label': 'foo',
             'amount': -10,
             'date': datetime.date(2015, 10, 26),
-            'status': BankTransactionScheduler.STATUS_IGNORED,
-            'payment_method': BankTransactionScheduler.PAYMENT_METHOD_CASH,
+            'status': Scheduler.STATUS_IGNORED,
+            'payment_method': Scheduler.PAYMENT_METHOD_CASH,
             'memo': 'blah blah blah',
             'tag': tag.pk,
-            'type': BankTransactionScheduler.TYPE_WEEKLY,
+            'type': Scheduler.TYPE_WEEKLY,
             'recurrence': 3,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.label, 'foo')
-        self.assertEqual(bts.amount, Decimal(-10))
-        self.assertEqual(bts.date, datetime.date(2015, 10, 26))
-        self.assertEqual(bts.status, BankTransactionScheduler.STATUS_IGNORED)
-        self.assertFalse(bts.reconciled)
-        self.assertEqual(bts.payment_method, BankTransactionScheduler.PAYMENT_METHOD_CASH)
-        self.assertEqual(bts.memo, 'blah blah blah')
-        self.assertEqual(bts.tag, tag)
-        self.assertEqual(bts.type, BankTransactionScheduler.TYPE_WEEKLY)
-        self.assertEqual(bts.recurrence, 3)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.label, 'foo')
+        self.assertEqual(scheduler.amount, Decimal(-10))
+        self.assertEqual(scheduler.date, datetime.date(2015, 10, 26))
+        self.assertEqual(scheduler.status, Scheduler.STATUS_IGNORED)
+        self.assertFalse(scheduler.reconciled)
+        self.assertEqual(scheduler.payment_method, Scheduler.PAYMENT_METHOD_CASH)
+        self.assertEqual(scheduler.memo, 'blah blah blah')
+        self.assertEqual(scheduler.tag, tag)
+        self.assertEqual(scheduler.type, Scheduler.TYPE_WEEKLY)
+        self.assertEqual(scheduler.recurrence, 3)
 
     def test_create_now(self):
-        BankTransaction.objects.all().delete()
+        Transaction.objects.all().delete()
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={
             'label': 'foo',
@@ -280,50 +237,49 @@ class CreateViewTestCase(APITestCase):
             'start_now': True,
         })
         self.assertEqual(response.status_code, 201)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.label, 'foo')
-        bt = BankTransaction.objects.first()
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.label, 'foo')
+        bt = Transaction.objects.first()
         self.assertEqual(bt.label, 'foo')
+
+
+class RetrieveViewTestCase(APITestCase):
+
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = UserFactory()
+        cls.account = AccountFactory(currency='USD')
+        cls.scheduler = SchedulerFactory(account=cls.account)
+        cls.url = reverse('scheduler-detail', kwargs={
+            'pk': cls.scheduler.pk,
+        })
+
+    def test_access_anonymous(self):
+        self.client.force_authenticate(None)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 401)
+
+    def test_access_granted(self):
+        self.client.force_authenticate(self.user)
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 200)
 
 
 class PartialUpdateViewTestCase(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = UserFactory(user_permissions='all')
-        cls.bankaccount = BankAccountFactory(currency='EUR', owners=[cls.user])
-        cls.bts = BankTransactionSchedulerFactory(bankaccount=cls.bankaccount)
-        cls.url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': cls.bts.pk,
+        cls.user = UserFactory()
+        cls.account = AccountFactory(currency='EUR')
+        cls.scheduler = SchedulerFactory(account=cls.account)
+        cls.url = reverse('scheduler-detail', kwargs={
+            'pk': cls.scheduler.pk,
         })
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
         response = self.client.patch(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_authenticated(self):
-        user = UserFactory()
-        self.client.force_authenticate(user)
-        response = self.client.patch(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_owner_without_permission(self):
-        user = UserFactory()
-        self.bankaccount.owners.add(user)
-        bts = BankTransactionSchedulerFactory()
-        self.client.force_authenticate(user)
-        response = self.client.patch(
-            reverse('banktransactionschedulers:banktransactionscheduler-detail',
-                    kwargs={'pk': bts.pk})
-        )
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_not_owner_with_permissions(self):
-        user = UserFactory(user_permissions='all')
-        self.client.force_authenticate(user)
-        response = self.client.patch(self.url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
     def test_access_granted(self):
         self.client.force_authenticate(self.user)
@@ -331,84 +287,84 @@ class PartialUpdateViewTestCase(APITestCase):
         self.assertEqual(response.status_code, 200)
 
     def test_update_label(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        scheduler = SchedulerFactory(
+            account=self.account,
             label='foo',
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'label': 'bar'
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.label, 'bar')
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.label, 'bar')
 
-    def test_bankaccount_not_editable(self):
-        bts = BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+    def test_account_not_editable(self):
+        scheduler = SchedulerFactory(account=self.account)
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'bankaccount': BankAccountFactory().pk,
+            'account': AccountFactory().pk,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.bankaccount, self.bankaccount)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.account, self.account)
 
     def test_update_date(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        scheduler = SchedulerFactory(
+            account=self.account,
             date=datetime.date(2015, 10, 27),
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'date': datetime.date(2015, 10, 10),
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.date, datetime.date(2015, 10, 10))
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.date, datetime.date(2015, 10, 10))
 
     def test_update_status(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            status=BankTransactionScheduler.STATUS_ACTIVE,
+        scheduler = SchedulerFactory(
+            account=self.account,
+            status=Scheduler.STATUS_ACTIVE,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'status': BankTransactionScheduler.STATUS_INACTIVE,
+            'status': Scheduler.STATUS_INACTIVE,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.status, BankTransactionScheduler.STATUS_INACTIVE)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.status, Scheduler.STATUS_INACTIVE)
 
     def test_currency_not_editable(self):
-        bts = BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        scheduler = SchedulerFactory(account=self.account)
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={'currency': 'USD'})
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.currency, self.bankaccount.currency)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.currency, self.account.currency)
 
     def test_update_amount(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        scheduler = SchedulerFactory(
+            account=self.account,
             amount='10',
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
@@ -416,393 +372,241 @@ class PartialUpdateViewTestCase(APITestCase):
         })
         self.assertEqual(response.status_code, 200)
 
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.amount, Decimal('20'))
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.amount, Decimal('20'))
 
     def test_update_reconciled_not_editable(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        scheduler = SchedulerFactory(
+            account=self.account,
             reconciled=False,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'reconciled': True,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertFalse(bts.reconciled)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertFalse(scheduler.reconciled)
 
     def test_update_payment_method(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            payment_method=BankTransactionScheduler.PAYMENT_METHOD_CASH,
+        scheduler = SchedulerFactory(
+            account=self.account,
+            payment_method=Scheduler.PAYMENT_METHOD_CASH,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'payment_method': BankTransactionScheduler.PAYMENT_METHOD_CHECK,
+            'payment_method': Scheduler.PAYMENT_METHOD_CHECK,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.payment_method, BankTransactionScheduler.PAYMENT_METHOD_CHECK)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.payment_method, Scheduler.PAYMENT_METHOD_CHECK)
 
     def test_update_memo(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        scheduler = SchedulerFactory(
+            account=self.account,
             memo='',
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'memo': 'blah blah',
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.memo, 'blah blah')
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.memo, 'blah blah')
 
     def test_add_tag(self):
-        tag = BankTransactionTagFactory(owner=self.user)
-        bts = BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        tag = TagFactory()
+        scheduler = SchedulerFactory(account=self.account)
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.tag, tag)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.tag, tag)
 
     def test_update_tag(self):
-        tag = BankTransactionTagFactory(owner=self.user)
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            tag=BankTransactionTagFactory(owner=self.user),
+        tag = TagFactory()
+        scheduler = SchedulerFactory(
+            account=self.account,
+            tag=TagFactory(),
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.tag, tag)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.tag, tag)
 
     def test_remove_tag(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            tag=BankTransactionTagFactory(owner=self.user),
+        scheduler = SchedulerFactory(
+            account=self.account,
+            tag=TagFactory(),
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'tag': None,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertIsNone(bts.tag)
-
-    def test_update_not_owner_tag(self):
-        tag = BankTransactionTagFactory(owner=self.user)
-        tag_not_owner = BankTransactionTagFactory()
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            tag=tag,
-        )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
-        })
-        self.client.force_authenticate(self.user)
-        response = self.client.patch(url, data={
-            'tag': tag_not_owner.pk,
-        })
-        self.assertEqual(response.status_code, 400)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertIsNone(scheduler.tag)
 
     def test_update_type(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+        scheduler = SchedulerFactory(
+            account=self.account,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'type': BankTransactionScheduler.TYPE_WEEKLY,
+            'type': Scheduler.TYPE_WEEKLY,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.type, BankTransactionScheduler.TYPE_WEEKLY)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.type, Scheduler.TYPE_WEEKLY)
 
     def test_update_recurrence(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        scheduler = SchedulerFactory(
+            account=self.account,
             recurrence=4,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'recurrence': None,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertIsNone(bts.recurrence)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertIsNone(scheduler.recurrence)
 
     def test_update_last_action_not_editable(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            state=BankTransactionScheduler.STATE_FINISHED,
+        scheduler = SchedulerFactory(
+            account=self.account,
+            state=Scheduler.STATE_FINISHED,
             last_action=timezone.make_aware(datetime.datetime(2015, 11, 1)),
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'last_action': timezone.make_aware(datetime.datetime(2015, 11, 15)),
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
         self.assertEqual(
-            bts.last_action,
+            scheduler.last_action,
             timezone.make_aware(datetime.datetime(2015, 11, 1)),
         )
 
     def test_update_state_not_editable(self):
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            state=BankTransactionScheduler.STATE_WAITING,
+        scheduler = SchedulerFactory(
+            account=self.account,
+            state=Scheduler.STATE_WAITING,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'state': BankTransactionScheduler.STATE_FAILED,
+            'state': Scheduler.STATE_FAILED,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.state, BankTransactionScheduler.STATE_WAITING)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.state, Scheduler.STATE_WAITING)
 
     def test_partial_update(self):
-        tag = BankTransactionTagFactory(owner=self.user)
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        tag = TagFactory()
+        scheduler = SchedulerFactory(
+            account=self.account,
             label='foo',
             date=datetime.date(2015, 10, 27),
             amount=0,
-            status=BankTransactionScheduler.STATUS_INACTIVE,
+            status=Scheduler.STATUS_INACTIVE,
             reconciled=False,
-            payment_method=BankTransactionScheduler.PAYMENT_METHOD_CREDIT_CARD,
+            payment_method=Scheduler.PAYMENT_METHOD_CREDIT_CARD,
             memo='',
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
             recurrence=None,
         )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'label': 'bar',
             'date': datetime.date(2015, 10, 10),
             'amount': 10,
-            'status': BankTransactionScheduler.STATUS_ACTIVE,
-            'payment_method': BankTransactionScheduler.PAYMENT_METHOD_CASH,
+            'status': Scheduler.STATUS_ACTIVE,
+            'payment_method': Scheduler.PAYMENT_METHOD_CASH,
             'memo': 'blah blah',
             'tag': tag.pk,
-            'type': BankTransactionScheduler.TYPE_WEEKLY,
+            'type': Scheduler.TYPE_WEEKLY,
             'recurrence': 3,
         })
         self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.label, 'bar')
-        self.assertEqual(bts.date, datetime.date(2015, 10, 10))
-        self.assertEqual(bts.amount, Decimal('10'))
-        self.assertEqual(bts.status, BankTransactionScheduler.STATUS_ACTIVE)
-        self.assertFalse(bts.reconciled)
-        self.assertEqual(bts.payment_method, BankTransactionScheduler.PAYMENT_METHOD_CASH)
-        self.assertEqual(bts.memo, 'blah blah')
-        self.assertEqual(bts.tag, tag)
-        self.assertEqual(bts.type, BankTransactionScheduler.TYPE_WEEKLY)
-        self.assertEqual(bts.recurrence, 3)
-
-
-class UpdateViewTestCase(APITestCase):
-
-    @classmethod
-    def setUpTestData(cls):
-        cls.user = UserFactory(user_permissions='all')
-        cls.bankaccount = BankAccountFactory(owners=[cls.user])
-        cls.bts = BankTransactionSchedulerFactory(bankaccount=cls.bankaccount)
-        cls.url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': cls.bts.pk,
-        })
-
-    def test_access_anonymous(self):
-        self.client.force_authenticate(None)
-        response = self.client.put(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_authenticated(self):
-        user = UserFactory()
-        self.client.force_authenticate(user)
-        response = self.client.put(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_owner_without_permission(self):
-        user = UserFactory()
-        self.bankaccount.owners.add(user)
-        bts = BankTransactionSchedulerFactory()
-        self.client.force_authenticate(user)
-        response = self.client.put(
-            reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-                'pk': bts.pk})
-        )
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_not_owner_with_permissions(self):
-        user = UserFactory(user_permissions='all')
-        self.client.force_authenticate(user)
-        response = self.client.put(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_granted(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.put(self.url)
-        self.assertNotEqual(response.status_code, 403)
-
-    def test_label_required(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.put(self.url, data={
-            'amount': 10,
-        })
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('label', response.data)
-
-    def test_amount_required(self):
-        self.client.force_authenticate(self.user)
-        response = self.client.put(self.url, data={
-            'label': 'foo',
-        })
-        self.assertEqual(response.status_code, 400)
-        self.assertIn('amount', response.data)
-
-    def test_update(self):
-        tag = BankTransactionTagFactory(owner=self.user)
-        bts = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
-            label='foo',
-            date=datetime.date(2015, 10, 27),
-            amount=0,
-            status=BankTransactionScheduler.STATUS_INACTIVE,
-            reconciled=False,
-            payment_method=BankTransactionScheduler.PAYMENT_METHOD_CREDIT_CARD,
-            memo='',
-            tag=BankTransactionTagFactory(owner=self.user),
-            type=BankTransactionScheduler.TYPE_MONTHLY,
-            recurrence=2,
-        )
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
-        })
-        self.client.force_authenticate(self.user)
-        response = self.client.put(url, data={
-            'label': 'bar',
-            'date': datetime.date(2015, 10, 10),
-            'amount': 10,
-            'status': BankTransactionScheduler.STATUS_ACTIVE,
-            'payment_method': BankTransactionScheduler.PAYMENT_METHOD_CASH,
-            'memo': 'blah blah',
-            'tag': tag.pk,
-            'type': BankTransactionScheduler.TYPE_WEEKLY,
-            'recurrence': 4,
-        })
-        self.assertEqual(response.status_code, 200)
-        bts = BankTransactionScheduler.objects.get(pk=response.data['id'])
-        self.assertEqual(bts.label, 'bar')
-        self.assertEqual(bts.date, datetime.date(2015, 10, 10))
-        self.assertEqual(bts.amount, Decimal('10'))
-        self.assertEqual(bts.status, BankTransactionScheduler.STATUS_ACTIVE)
-        self.assertFalse(bts.reconciled)
-        self.assertEqual(bts.payment_method, BankTransactionScheduler.PAYMENT_METHOD_CASH)
-        self.assertEqual(bts.memo, 'blah blah')
-        self.assertEqual(bts.tag, tag)
-        self.assertEqual(bts.type, BankTransactionScheduler.TYPE_WEEKLY)
-        self.assertEqual(bts.recurrence, 4)
+        scheduler = Scheduler.objects.get(pk=response.data['id'])
+        self.assertEqual(scheduler.label, 'bar')
+        self.assertEqual(scheduler.date, datetime.date(2015, 10, 10))
+        self.assertEqual(scheduler.amount, Decimal('10'))
+        self.assertEqual(scheduler.status, Scheduler.STATUS_ACTIVE)
+        self.assertFalse(scheduler.reconciled)
+        self.assertEqual(scheduler.payment_method, Scheduler.PAYMENT_METHOD_CASH)
+        self.assertEqual(scheduler.memo, 'blah blah')
+        self.assertEqual(scheduler.tag, tag)
+        self.assertEqual(scheduler.type, Scheduler.TYPE_WEEKLY)
+        self.assertEqual(scheduler.recurrence, 3)
 
 
 class DeleteViewTestCase(APITestCase):
 
     @classmethod
     def setUpTestData(cls):
-        cls.user = UserFactory(user_permissions='all')
-        cls.bankaccount = BankAccountFactory(owners=[cls.user])
-        cls.bts = BankTransactionSchedulerFactory(bankaccount=cls.bankaccount)
-        cls.url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': cls.bts.pk,
+        cls.user = UserFactory()
+        cls.account = AccountFactory()
+        cls.scheduler = SchedulerFactory(account=cls.account)
+        cls.url = reverse('scheduler-detail', kwargs={
+            'pk': cls.scheduler.pk,
         })
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
         response = self.client.delete(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_authenticated(self):
-        user = UserFactory()
-        self.client.force_authenticate(user)
-        response = self.client.delete(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_owner_without_permission(self):
-        user = UserFactory()
-        self.bankaccount.owners.add(user)
-        bts = BankTransactionSchedulerFactory()
-        self.client.force_authenticate(user)
-        response = self.client.delete(
-            reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-                'pk': bts.pk})
-        )
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_not_owner_with_permissions(self):
-        user = UserFactory(user_permissions='all')
-        self.client.force_authenticate(user)
-        response = self.client.delete(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_granted(self):
-        bts = BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
-        })
-        self.client.force_authenticate(self.user)
-        response = self.client.delete(url)
-        self.assertEqual(response.status_code, 204)
+        self.assertEqual(response.status_code, 401)
 
     def test_delete(self):
-        bts = BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
-        url = reverse('banktransactionschedulers:banktransactionscheduler-detail', kwargs={
-            'pk': bts.pk,
+        scheduler = SchedulerFactory(account=self.account)
+        url = reverse('scheduler-detail', kwargs={
+            'pk': scheduler.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)
-        with self.assertRaises(BankTransactionScheduler.DoesNotExist):
-            bts.refresh_from_db()
+        with self.assertRaises(Scheduler.DoesNotExist):
+            scheduler.refresh_from_db()
 
 
 class ListViewTestCase(APITestCase):
@@ -810,24 +614,16 @@ class ListViewTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = UserFactory()
-        cls.bankaccount = BankAccountFactory(owners=[cls.user])
-        cls.url = reverse('banktransactionschedulers:banktransactionscheduler-list', kwargs={
-            'bankaccount_pk': cls.bankaccount.pk,
-        })
+        cls.account = AccountFactory()
+        cls.url = reverse('scheduler-list')
 
     def tearDown(self):
-        BankTransactionScheduler.objects.all().delete()
+        Scheduler.objects.all().delete()
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_not_owner(self):
-        user = UserFactory()
-        self.client.force_authenticate(user)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
     def test_access_granted(self):
         self.client.force_authenticate(self.user)
@@ -842,7 +638,7 @@ class ListViewTestCase(APITestCase):
         total = limit * 2 + 1
 
         for i in range(0, total):
-            BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
+            SchedulerFactory(account=self.account)
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -859,26 +655,26 @@ class ListViewTestCase(APITestCase):
         self.assertEqual(response.data['count'], 0)
         self.assertListEqual(response.data['results'], [])
 
-    def test_other_bankaccount(self):
-        bts = BankTransactionSchedulerFactory(bankaccount=self.bankaccount)
-        BankTransactionSchedulerFactory()
+    def test_other_account(self):
+        scheduler = SchedulerFactory(account=self.account)
+        SchedulerFactory()
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], bts.pk)
+        self.assertEqual(response.data['results'][0]['id'], scheduler.pk)
 
     def test_ordering_default(self):
-        bts1 = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        bts1 = SchedulerFactory(
+            account=self.account,
             last_action=None,
         )
-        bts2 = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        bts2 = SchedulerFactory(
+            account=self.account,
             last_action=timezone.make_aware(datetime.datetime(2015, 10, 28)),
         )
-        bts3 = BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        bts3 = SchedulerFactory(
+            account=self.account,
             last_action=timezone.make_aware(datetime.datetime(2015, 10, 27)),
         )
 
@@ -888,7 +684,7 @@ class ListViewTestCase(APITestCase):
         self.assertEqual(response.data['count'], 3)
         self.assertListEqual(
             [bts1.pk, bts2.pk, bts3.pk],
-            [bts['id'] for bts in response.data['results']],
+            [scheduler['id'] for scheduler in response.data['results']],
         )
 
 
@@ -897,24 +693,16 @@ class SummaryViewTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = UserFactory()
-        cls.bankaccount = BankAccountFactory(owners=[cls.user])
-        cls.url = reverse('banktransactionschedulers:banktransactionscheduler-summary', kwargs={
-            'bankaccount_pk': cls.bankaccount.pk,
-        })
+        cls.account = AccountFactory()
+        cls.url = reverse('scheduler-summary')
 
     def tearDown(self):
-        BankTransactionScheduler.objects.all().delete()
+        Scheduler.objects.all().delete()
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
         response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 403)
-
-    def test_access_not_owner(self):
-        user = UserFactory()
-        self.client.force_authenticate(user)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 403)
+        self.assertEqual(response.status_code, 401)
 
     def test_access_granted(self):
         self.client.force_authenticate(self.user)
@@ -929,15 +717,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertDictEqual(response.data['summary'], {})
 
     def test_no_credit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -946,15 +734,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['weekly']['credit'], 0)
 
     def test_no_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -962,27 +750,27 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['monthly']['debit'], 0)
         self.assertEqual(response.data['summary']['weekly']['debit'], 0)
 
-    def test_other_bankaccount(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+    def test_other_account(self):
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(amount=-10)
+        SchedulerFactory(amount=-10)
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
 
     def test_no_monthly(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -990,15 +778,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertNotIn('monthly', response.data['summary'])
 
     def test_no_weekly(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1006,15 +794,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertNotIn('weekly', response.data['summary'])
 
     def test_monthly_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-5,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1022,15 +810,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['monthly']['debit'], -15)
 
     def test_monthly_credit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=5,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1038,20 +826,20 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['monthly']['credit'], 15)
 
     def test_monthly_credit_and_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-5,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-15,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1061,15 +849,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['monthly']['total'], -10)
 
     def test_weekly_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-5,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1077,15 +865,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['weekly']['debit'], -15)
 
     def test_weekly_credit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=5,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1093,20 +881,20 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['weekly']['credit'], 15)
 
     def test_weekly_credit_and_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-5,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-15,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1116,25 +904,25 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['weekly']['total'], -10)
 
     def test_credit_and_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-5,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-5,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1147,15 +935,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['weekly']['total'], 5)
 
     def test_total_monthly(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1163,15 +951,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['total'], 0)
 
     def test_total_weekly(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1179,15 +967,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['total'], 0)
 
     def test_total_credit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1195,15 +983,15 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['total'], 20)
 
     def test_total_debit(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-10,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
@@ -1211,56 +999,56 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['total'], -20)
 
     def test_total_all(self):
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=10,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-20,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=30,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-40,
-            type=BankTransactionScheduler.TYPE_WEEKLY,
+            type=Scheduler.TYPE_WEEKLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['total'], -20)
 
-    @mock.patch('mymoney.api.banktransactions.models.timezone.now')
+    @mock.patch('mymoney.transactions.models.timezone.now')
     def test_used_nothing(self, mock_now):
         mock_now.return_value = timezone.make_aware(datetime.datetime(2015, 11, 2))
 
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=1000,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['summary']['monthly']['used'], 0)
 
-    @mock.patch('mymoney.api.banktransactions.models.timezone.now')
+    @mock.patch('mymoney.transactions.models.timezone.now')
     def test_used_some_credit(self, mock_now):
         mock_now.return_value = timezone.make_aware(datetime.datetime(2015, 11, 20))
 
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=1000,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionFactory(
-            bankaccount=self.bankaccount,
+        TransactionFactory(
+            account=self.account,
             amount=-500,
             date=datetime.date(2015, 11, 15),
             scheduled=False,
@@ -1272,22 +1060,22 @@ class SummaryViewTestCase(APITestCase):
         self.assertEqual(response.data['summary']['monthly']['used'], -500)
         self.assertEqual(response.data['summary']['monthly']['remaining'], 500)
 
-    @mock.patch('mymoney.api.banktransactions.models.timezone.now')
+    @mock.patch('mymoney.transactions.models.timezone.now')
     def test_used_some_credit_and_debit(self, mock_now):
         mock_now.return_value = timezone.make_aware(datetime.datetime(2015, 11, 20))
 
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=1000,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionSchedulerFactory(
-            bankaccount=self.bankaccount,
+        SchedulerFactory(
+            account=self.account,
             amount=-300,
-            type=BankTransactionScheduler.TYPE_MONTHLY,
+            type=Scheduler.TYPE_MONTHLY,
         )
-        BankTransactionFactory(
-            bankaccount=self.bankaccount,
+        TransactionFactory(
+            account=self.account,
             amount=-500,
             date=datetime.date(2015, 11, 15),
             scheduled=False,

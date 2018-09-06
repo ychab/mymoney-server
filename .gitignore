@@ -8,7 +8,7 @@ docs/_build/
 .python-version
 .virtualenv
 
-mymoney/settings/local.py.dist
+mymoney/settings/local.py
 mymoney/static
 
 .idea

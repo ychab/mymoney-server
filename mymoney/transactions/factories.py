@@ -4,25 +4,27 @@ import factory
 from dateutil.relativedelta import relativedelta
 from factory import fuzzy
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.accounts.factories import AccountFactory
 
-from .models import BankTransaction
+from .models import Transaction
 
 
-class AbstractBankTransactionFactory(factory.DjangoModelFactory):
+class AbstractTransactionFactory(factory.DjangoModelFactory):
 
     class Meta:
         abstract = True
 
     label = factory.Sequence(lambda n: 'test_%d' % n)
-    bankaccount = factory.SubFactory(BankAccountFactory)
+    account = factory.SubFactory(AccountFactory)
     date = fuzzy.FuzzyDate(datetime.date.today() - relativedelta(months=1))
     amount = fuzzy.FuzzyDecimal(-1000)
-    currency = factory.SelfAttribute('bankaccount.currency')
-    payment_method = fuzzy.FuzzyChoice(dict(BankTransaction.PAYMENT_METHODS).keys())
+    currency = factory.SelfAttribute('account.currency')
+    payment_method = fuzzy.FuzzyChoice(dict(Transaction.PAYMENT_METHODS).keys())
 
 
-class BankTransactionFactory(AbstractBankTransactionFactory):
+class TransactionFactory(AbstractTransactionFactory):
 
     class Meta:
-        model = BankTransaction
+        model = Transaction
+
+    scheduled = False

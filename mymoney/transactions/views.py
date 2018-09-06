@@ -1,123 +1,83 @@
 from collections import OrderedDict
 
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-
-from rest_framework import exceptions, status
-from rest_framework.decorators import list_route
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
-from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
-from mymoney.api.bankaccounts.mixins import BankAccountContext
-from mymoney.api.bankaccounts.permissions import IsBankAccountOwner
+from django_filters.rest_framework import DjangoFilterBackend
 
-from .filters import BankTransactionFilter, BankTransactionFilterBackend
-from .models import BankTransaction
+from mymoney.core.utils import get_default_account
+from mymoney.transactions.filters import TransactionFilter
+
+from .models import Transaction
 from .serializers import (
-    BankTransactionDeleteMutipleSerializer,
-    BankTransactionDetailExtraSerializer, BankTransactionDetailSerializer,
-    BankTransactionEventInputSerializer, BankTransactionEventOutputSerializer,
-    BankTransactionPartialUpdateMutipleSerializer, BankTransactionSerializer,
+    TransactionDeleteMutipleSerializer, TransactionDetailSerializer,
+    TransactionListSerializer, TransactionPartialUpdateMutipleSerializer,
+    TransactionSerializer,
 )
 
 
-class BankTransactionViewSet(BankAccountContext, ModelViewSet):
-    model = BankTransaction
-    queryset = BankTransaction.objects.all()
-    permission_classes = (IsBankAccountOwner, DjangoModelPermissions)
-    filter_backends = (SearchFilter, BankTransactionFilterBackend, OrderingFilter,)
+class TransactionViewSet(ModelViewSet):
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter,)
+    filterset_class = TransactionFilter
     search_fields = ('label',)
-    filter_class = BankTransactionFilter
     ordering_fields = ('label', 'date')
     ordering = ('-date',)
 
-    def filter_queryset(self, queryset):
-        # Convert filter form errors raised.
-        try:
-            return super(BankTransactionViewSet, self).filter_queryset(queryset)
-        except ValidationError as exc:
-            raise exceptions.ValidationError(
-                {api_settings.NON_FIELD_ERRORS_KEY if k == NON_FIELD_ERRORS else k: v
-                 for k, v in exc.message_dict.items()})
+    def get_queryset(self):
+        return Transaction.objects.filter(account=get_default_account())
 
     def get_serializer_class(self):
         if self.action == 'list':
-            return BankTransactionDetailExtraSerializer
+            return TransactionListSerializer
         elif self.action == 'retrieve':
-            return BankTransactionDetailSerializer
-        return BankTransactionSerializer
+            return TransactionDetailSerializer
+        return TransactionSerializer
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.order_by(*(queryset.query.order_by + ['-id']))
-        queryset = self.add_queryset_extra_fields(queryset)
+        queryset = queryset.order_by(*(queryset.query.order_by + ('-id',)))
+        queryset = self._add_queryset_extra_fields(queryset)
 
         page = self.paginate_queryset(queryset)
         serializer = self.get_serializer(page, many=True)
         return self.get_paginated_response(serializer.data)
 
+    @action(methods=['patch'], detail=False, url_path='partial-update-multiple')
     def partial_update_multiple(self, request, *args, **kwargs):
-        serializer = BankTransactionPartialUpdateMutipleSerializer(
-            data=request.data, context={'request': request})
-
+        serializer = TransactionPartialUpdateMutipleSerializer(
+            data=request.data,
+            context={'request': request},
+        )
         serializer.is_valid(raise_exception=True)
+
         fields = {k: v for k, v in serializer.data.items() if k not in ('ids',)}
 
-        banktransactions = BankTransaction.objects.filter(pk__in=serializer.data['ids'])
-        for banktransaction in banktransactions:
+        transactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
+        for transaction in transactions:
             for field, value in fields.items():
-                setattr(banktransaction, field, value)
-            banktransaction.save(update_fields=fields.keys())
+                setattr(transaction, field, value)
+            transaction.save(update_fields=fields.keys())
 
         return Response()
 
+    @action(methods=['delete'], detail=False, url_path='delete-multiple')
     def delete_multiple(self, request, *args, **kwargs):
-        serializer = BankTransactionDeleteMutipleSerializer(
-            data=request.data, context={'request': request})
-
+        serializer = TransactionDeleteMutipleSerializer(
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
 
-        banktransactions = BankTransaction.objects.filter(pk__in=serializer.data['ids'])
-        for banktransaction in banktransactions:
-            banktransaction.delete()
+        transactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
+        for transaction in transactions:
+            transaction.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    @list_route(['get'])
-    def calendar_events(self, request, *args, **kwargs):
-        """
-        Endpoint for Bootstrap-calendar Javascript library.
-        """
-        serializer_in = BankTransactionEventInputSerializer(data={
-            'date_from': request.query_params.get('from'),
-            'date_to': request.query_params.get('to'),
-        })
-        serializer_in.is_valid(raise_exception=True)
-
-        qs = (
-            BankTransaction.objects.filter(
-                bankaccount=self.bankaccount,
-                date__range=(
-                    serializer_in.data['date_from'],
-                    serializer_in.data['date_to'],
-                ),
-            )
-        )
-        qs = self.add_queryset_extra_fields(qs)
-        qs = qs.order_by('date', 'id')
-
-        serializer_out = BankTransactionEventOutputSerializer(
-            qs, many=True, context={'request': request})
-
-        # Bootstrap-calendar Javascript library expect this output signature.
-        return Response({
-            "success": 1,
-            "result": serializer_out.data,
-        })
-
-    def add_queryset_extra_fields(self, qs):
+    def _add_queryset_extra_fields(self, qs):
         """
         Add extra fields to the queryset.
         By using SQL and not Python, we could alter order_by and sort without
@@ -127,6 +87,8 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
         - total_balance
         - reconciled_balance
         """
+        account = get_default_account()
+
         # Unfortunetly, we cannot get it by doing the opposite (i.e :
         # total balance - SUM(futur bt) because with postgreSQL at least,
         # the last dated bank transaction would give None :
@@ -134,10 +96,10 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
         # It could be usefull because most of the time, we are seing the
         # latest bank transactions, not the first.
         total_balance_subquery = """
-            SELECT SUM(bt_sub.amount) + {balance_initial}
+            SELECT SUM(bt_sub.amount)
             FROM {table} AS bt_sub
             WHERE
-                bt_sub.bankaccount_id = %s
+                bt_sub.account_id = %s
                 AND (
                     bt_sub.date < {table}.date
                     OR (
@@ -147,15 +109,14 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
                     )
                 )
             """.format(
-            table=BankTransaction._meta.db_table,
-            balance_initial=self.bankaccount.balance_initial,
+            table=Transaction._meta.db_table,
         )
 
         reconciled_balance_subquery = """
-            SELECT SUM(bt_sub_r.amount) + {balance_initial}
+            SELECT SUM(bt_sub_r.amount)
             FROM {table} AS bt_sub_r
             WHERE
-                bt_sub_r.bankaccount_id = %s
+                bt_sub_r.account_id = %s
                 AND
                 bt_sub_r.reconciled is True
                 AND (
@@ -166,8 +127,7 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
                         bt_sub_r.id <= {table}.id
                     )
                 )""".format(
-            table=BankTransaction._meta.db_table,
-            balance_initial=self.bankaccount.balance_initial,
+            table=Transaction._meta.db_table,
         )
 
         return qs.extra(
@@ -175,5 +135,5 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
                 ('balance_total', total_balance_subquery),
                 ('balance_reconciled', reconciled_balance_subquery),
             ]),
-            select_params=(self.bankaccount.pk, self.bankaccount.pk)
+            select_params=(account.pk, account.pk)
         )

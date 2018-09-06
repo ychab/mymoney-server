@@ -3,8 +3,8 @@ from unittest import mock
 
 from django.test import TestCase
 
-from mymoney.banktransactiontags import BankTransactionTagFactory
-from mymoney.api.users.factories import UserFactory
+from mymoney.core.factories import UserFactory
+from mymoney.tags.factories import TagFactory
 
 from ..serializers import RatioInputSerializer, RatioSummaryInputSerializer
 
@@ -77,42 +77,14 @@ class RatioInputSerializerTestCase(TestCase):
         self.assertTrue(serializer.is_valid())
         self.assertListEqual(serializer.data['tags'], [])
 
-    def test_tags_owner_none(self):
+    def test_tags(self):
         serializer = RatioInputSerializer(
             data={
                 'date_start': datetime.date(2015, 11, 1),
                 'date_end': datetime.date(2015, 11, 2),
                 'tags': [
-                    BankTransactionTagFactory().pk,
-                    BankTransactionTagFactory().pk,
-                ],
-            },
-            context={"request": mock.Mock(user=self.user)},
-        )
-        self.assertFalse(serializer.is_valid())
-
-    def test_tags_owner_not_all(self):
-        serializer = RatioInputSerializer(
-            data={
-                'date_start': datetime.date(2015, 11, 1),
-                'date_end': datetime.date(2015, 11, 2),
-                'tags': [
-                    BankTransactionTagFactory(owner=self.user).pk,
-                    BankTransactionTagFactory().pk,
-                ],
-            },
-            context={"request": mock.Mock(user=self.user)},
-        )
-        self.assertFalse(serializer.is_valid())
-
-    def test_tags_owner_all(self):
-        serializer = RatioInputSerializer(
-            data={
-                'date_start': datetime.date(2015, 11, 1),
-                'date_end': datetime.date(2015, 11, 2),
-                'tags': [
-                    BankTransactionTagFactory(owner=self.user).pk,
-                    BankTransactionTagFactory(owner=self.user).pk,
+                    TagFactory().pk,
+                    TagFactory().pk,
                 ],
             },
             context={"request": mock.Mock(user=self.user)},
@@ -190,20 +162,8 @@ class RatioSummaryInputSerializerTestCase(TestCase):
         self.assertTrue(serializer.is_valid())
         self.assertIsNone(serializer.data['tag'])
 
-    def test_tag_not_owner(self):
-        tag = BankTransactionTagFactory()
-        serializer = RatioSummaryInputSerializer(
-            data={
-                'date_start': datetime.date(2015, 11, 1),
-                'date_end': datetime.date(2015, 11, 2),
-                'tag': tag.pk,
-            },
-            context={"request": mock.Mock(user=self.user)},
-        )
-        self.assertFalse(serializer.is_valid())
-
     def test_tag(self):
-        tag = BankTransactionTagFactory(owner=self.user)
+        tag = TagFactory()
         serializer = RatioSummaryInputSerializer(
             data={
                 'date_start': datetime.date(2015, 11, 1),
