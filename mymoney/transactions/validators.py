@@ -3,7 +3,7 @@ from django.utils.translation import ugettext as _
 
 from rest_framework import exceptions
 
-from .models import BankTransaction
+from .models import Transaction
 
 
 class BankTransactionOwnerValidator(object):
@@ -27,7 +27,7 @@ class BankTransactionOwnerValidator(object):
                 'The bulk limit of {max} is exceed.'.format(max=self.MAX)))
 
         banktransactions = (
-            BankTransaction.objects
+            Transaction.objects
             .filter(
                 pk__in=[v.pk for v in value],
                 bankaccount__in=self.user.bankaccounts.all(),

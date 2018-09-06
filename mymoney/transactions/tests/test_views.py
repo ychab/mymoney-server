@@ -10,12 +10,12 @@ from rest_framework.reverse import reverse
 from rest_framework.settings import api_settings
 from rest_framework.test import APITestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 from mymoney.banktransactiontags import BankTransactionTagFactory
 from mymoney.api.users.factories import UserFactory
 
 from ..factories import BankTransactionFactory
-from ..models import BankTransaction
+from ..models import Transaction
 
 
 class RetrieveViewTestCase(APITestCase):
@@ -48,7 +48,7 @@ class RetrieveViewTestCase(APITestCase):
     def test_retrieve_payment_method(self):
         banktransaction = BankTransactionFactory(
             bankaccount=self.bankaccount,
-            payment_method=BankTransaction.PAYMENT_METHOD_CASH,
+            payment_method=Transaction.PAYMENT_METHOD_CASH,
         )
         url = reverse('banktransactions:banktransaction-detail', kwargs={
             'pk': banktransaction.pk,
@@ -182,7 +182,7 @@ class CreateViewTestCase(APITestCase):
             'bankaccount': BankAccountFactory().pk,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.bankaccount, self.bankaccount)
 
     def test_date_default(self):
@@ -192,7 +192,7 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.date, datetime.date.today())
 
     def test_amount_required(self):
@@ -211,7 +211,7 @@ class CreateViewTestCase(APITestCase):
             'currency': 'EUR',
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertNotEqual(banktransaction.currency, 'EUR')
         self.assertEqual(banktransaction.currency, self.bankaccount.currency)
 
@@ -222,8 +222,8 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
-        self.assertEqual(banktransaction.status, BankTransaction.STATUS_ACTIVE)
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
+        self.assertEqual(banktransaction.status, Transaction.STATUS_ACTIVE)
 
     def test_reconciled_default(self):
         self.client.force_authenticate(self.user)
@@ -232,7 +232,7 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertFalse(banktransaction.reconciled)
 
     def test_payment_method_default(self):
@@ -242,10 +242,10 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(
             banktransaction.payment_method,
-            BankTransaction.PAYMENT_METHOD_CREDIT_CARD,
+            Transaction.PAYMENT_METHOD_CREDIT_CARD,
         )
 
     def test_memo_blank(self):
@@ -255,7 +255,7 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.memo, '')
 
     def test_tag_none(self):
@@ -265,7 +265,7 @@ class CreateViewTestCase(APITestCase):
             'amount': 10,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertIsNone(banktransaction.tag)
 
     def test_scheduled_default(self):
@@ -276,7 +276,7 @@ class CreateViewTestCase(APITestCase):
             'scheduled': True,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertFalse(banktransaction.scheduled)
 
     def test_tag_not_owner(self):
@@ -301,7 +301,7 @@ class CreateViewTestCase(APITestCase):
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.tag, tag)
 
     def test_tag_owner_by_relationship(self):
@@ -316,7 +316,7 @@ class CreateViewTestCase(APITestCase):
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.tag, tag)
 
     def test_create(self):
@@ -327,21 +327,21 @@ class CreateViewTestCase(APITestCase):
             'label': 'foo',
             'amount': -10,
             'date': datetime.date(2015, 10, 26),
-            'status': BankTransaction.STATUS_IGNORED,
+            'status': Transaction.STATUS_IGNORED,
             'reconciled': True,
-            'payment_method': BankTransaction.PAYMENT_METHOD_CASH,
+            'payment_method': Transaction.PAYMENT_METHOD_CASH,
             'memo': 'blah blah blah',
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 201)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.label, 'foo')
         self.assertEqual(banktransaction.amount, Decimal(-10))
         self.assertEqual(banktransaction.date, datetime.date(2015, 10, 26))
-        self.assertEqual(banktransaction.status, BankTransaction.STATUS_IGNORED)
+        self.assertEqual(banktransaction.status, Transaction.STATUS_IGNORED)
         self.assertTrue(banktransaction.reconciled)
         self.assertEqual(
-            banktransaction.payment_method, BankTransaction.PAYMENT_METHOD_CASH)
+            banktransaction.payment_method, Transaction.PAYMENT_METHOD_CASH)
         self.assertEqual(banktransaction.memo, 'blah blah blah')
         self.assertEqual(banktransaction.tag, tag)
 
@@ -403,7 +403,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'label': 'bar'
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.label, 'bar')
 
     def test_bankaccount_not_editable(self):
@@ -416,7 +416,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'bankaccount': BankAccountFactory().pk,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.bankaccount, self.bankaccount)
 
     def test_update_date(self):
@@ -432,24 +432,24 @@ class PartialUpdateViewTestCase(APITestCase):
             'date': datetime.date(2015, 10, 10),
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.date, datetime.date(2015, 10, 10))
 
     def test_update_status(self):
         banktransaction = BankTransactionFactory(
             bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_ACTIVE,
+            status=Transaction.STATUS_ACTIVE,
         )
         url = reverse('banktransactions:banktransaction-detail', kwargs={
             'pk': banktransaction.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'status': BankTransaction.STATUS_INACTIVE,
+            'status': Transaction.STATUS_INACTIVE,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
-        self.assertEqual(banktransaction.status, BankTransaction.STATUS_INACTIVE)
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
+        self.assertEqual(banktransaction.status, Transaction.STATUS_INACTIVE)
 
     def test_currency_not_editable(self):
         banktransaction = BankTransactionFactory(bankaccount=self.bankaccount)
@@ -459,7 +459,7 @@ class PartialUpdateViewTestCase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={'currency': 'USD'})
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.currency, self.bankaccount.currency)
 
     def test_update_amount_active(self):
@@ -467,7 +467,7 @@ class PartialUpdateViewTestCase(APITestCase):
         banktransaction = BankTransactionFactory(
             bankaccount=bankaccount,
             amount='10',
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal('0'))
@@ -478,11 +478,11 @@ class PartialUpdateViewTestCase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'amount': '20',
-            'status': BankTransaction.STATUS_ACTIVE,
+            'status': Transaction.STATUS_ACTIVE,
         })
         self.assertEqual(response.status_code, 200)
 
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.amount, Decimal('20'))
 
         bankaccount.refresh_from_db()
@@ -493,7 +493,7 @@ class PartialUpdateViewTestCase(APITestCase):
         banktransaction = BankTransactionFactory(
             bankaccount=bankaccount,
             amount='10',
-            status=BankTransaction.STATUS_ACTIVE,
+            status=Transaction.STATUS_ACTIVE,
         )
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal('10'))
@@ -504,11 +504,11 @@ class PartialUpdateViewTestCase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
             'amount': '20',
-            'status': BankTransaction.STATUS_INACTIVE,
+            'status': Transaction.STATUS_INACTIVE,
         })
         self.assertEqual(response.status_code, 200)
 
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.amount, Decimal('20'))
 
         bankaccount.refresh_from_db()
@@ -533,18 +533,18 @@ class PartialUpdateViewTestCase(APITestCase):
     def test_update_payment_method(self):
         banktransaction = BankTransactionFactory(
             bankaccount=self.bankaccount,
-            payment_method=BankTransaction.PAYMENT_METHOD_CASH,
+            payment_method=Transaction.PAYMENT_METHOD_CASH,
         )
         url = reverse('banktransactions:banktransaction-detail', kwargs={
             'pk': banktransaction.pk,
         })
         self.client.force_authenticate(self.user)
         response = self.client.patch(url, data={
-            'payment_method': BankTransaction.PAYMENT_METHOD_CHECK,
+            'payment_method': Transaction.PAYMENT_METHOD_CHECK,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
-        self.assertEqual(banktransaction.payment_method, BankTransaction.PAYMENT_METHOD_CHECK)
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
+        self.assertEqual(banktransaction.payment_method, Transaction.PAYMENT_METHOD_CHECK)
 
     def test_update_memo(self):
         banktransaction = BankTransactionFactory(
@@ -559,7 +559,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'memo': 'blah blah',
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.memo, 'blah blah')
 
     def test_add_tag(self):
@@ -573,7 +573,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.tag, tag)
 
     def test_update_tag(self):
@@ -590,7 +590,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'tag': tag.pk,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(banktransaction.tag, tag)
 
     def test_remove_tag(self):
@@ -606,7 +606,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'tag': None,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertIsNone(banktransaction.tag)
 
     def test_update_not_owner_tag(self):
@@ -638,7 +638,7 @@ class PartialUpdateViewTestCase(APITestCase):
             'scheduled': True,
         })
         self.assertEqual(response.status_code, 200)
-        banktransaction = BankTransaction.objects.get(pk=response.data['id'])
+        banktransaction = Transaction.objects.get(pk=response.data['id'])
         self.assertFalse(banktransaction.scheduled)
 
     def test_partial_update(self):
@@ -648,9 +648,9 @@ class PartialUpdateViewTestCase(APITestCase):
             label='foo',
             date=datetime.date(2015, 10, 27),
             amount=0,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
             reconciled=False,
-            payment_method=BankTransaction.PAYMENT_METHOD_CREDIT_CARD,
+            payment_method=Transaction.PAYMENT_METHOD_CREDIT_CARD,
             memo='',
         )
         url = reverse('banktransactions:banktransaction-detail', kwargs={
@@ -661,9 +661,9 @@ class PartialUpdateViewTestCase(APITestCase):
             'label': 'bar',
             'date': datetime.date(2015, 10, 10),
             'amount': 10,
-            'status': BankTransaction.STATUS_ACTIVE,
+            'status': Transaction.STATUS_ACTIVE,
             'reconciled': True,
-            'payment_method': BankTransaction.PAYMENT_METHOD_CASH,
+            'payment_method': Transaction.PAYMENT_METHOD_CASH,
             'memo': 'blah blah',
             'tag': tag.pk,
         })
@@ -672,9 +672,9 @@ class PartialUpdateViewTestCase(APITestCase):
         self.assertEqual(banktransaction.label, 'bar')
         self.assertEqual(banktransaction.date, datetime.date(2015, 10, 10))
         self.assertEqual(banktransaction.amount, Decimal('10'))
-        self.assertEqual(banktransaction.status, BankTransaction.STATUS_ACTIVE)
+        self.assertEqual(banktransaction.status, Transaction.STATUS_ACTIVE)
         self.assertTrue(banktransaction.reconciled)
-        self.assertEqual(banktransaction.payment_method, BankTransaction.PAYMENT_METHOD_CASH)
+        self.assertEqual(banktransaction.payment_method, Transaction.PAYMENT_METHOD_CASH)
         self.assertEqual(banktransaction.memo, 'blah blah')
         self.assertEqual(banktransaction.tag, tag)
 
@@ -746,9 +746,9 @@ class UpdateViewTestCase(APITestCase):
             label='foo',
             date=datetime.date(2015, 10, 27),
             amount=0,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
             reconciled=False,
-            payment_method=BankTransaction.PAYMENT_METHOD_CREDIT_CARD,
+            payment_method=Transaction.PAYMENT_METHOD_CREDIT_CARD,
             memo='',
             tag=BankTransactionTagFactory(owner=self.user),
         )
@@ -760,9 +760,9 @@ class UpdateViewTestCase(APITestCase):
             'label': 'bar',
             'date': datetime.date(2015, 10, 10),
             'amount': 10,
-            'status': BankTransaction.STATUS_ACTIVE,
+            'status': Transaction.STATUS_ACTIVE,
             'reconciled': True,
-            'payment_method': BankTransaction.PAYMENT_METHOD_CASH,
+            'payment_method': Transaction.PAYMENT_METHOD_CASH,
             'memo': 'blah blah',
             'tag': tag.pk,
         })
@@ -771,9 +771,9 @@ class UpdateViewTestCase(APITestCase):
         self.assertEqual(banktransaction.label, 'bar')
         self.assertEqual(banktransaction.date, datetime.date(2015, 10, 10))
         self.assertEqual(banktransaction.amount, Decimal('10'))
-        self.assertEqual(banktransaction.status, BankTransaction.STATUS_ACTIVE)
+        self.assertEqual(banktransaction.status, Transaction.STATUS_ACTIVE)
         self.assertTrue(banktransaction.reconciled)
-        self.assertEqual(banktransaction.payment_method, BankTransaction.PAYMENT_METHOD_CASH)
+        self.assertEqual(banktransaction.payment_method, Transaction.PAYMENT_METHOD_CASH)
         self.assertEqual(banktransaction.memo, 'blah blah')
         self.assertEqual(banktransaction.tag, tag)
 
@@ -834,7 +834,7 @@ class DeleteViewTestCase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)
-        with self.assertRaises(BankTransaction.DoesNotExist):
+        with self.assertRaises(Transaction.DoesNotExist):
             banktransaction.refresh_from_db()
 
 
@@ -849,7 +849,7 @@ class ListViewTestCase(APITestCase):
         })
 
     def tearDown(self):
-        BankTransaction.objects.all().delete()
+        Transaction.objects.all().delete()
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
@@ -1103,16 +1103,16 @@ class ListViewTestCase(APITestCase):
     def test_filter_status(self):
         bt1 = BankTransactionFactory(
             bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_ACTIVE,
+            status=Transaction.STATUS_ACTIVE,
         )
         BankTransactionFactory(
             bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'status': BankTransaction.STATUS_ACTIVE,
+            'status': Transaction.STATUS_ACTIVE,
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 1)
@@ -1959,23 +1959,23 @@ class PartialUpdateMultipleViewTestCase(APITestCase):
     def test_update_multiple_status(self):
         bt1 = BankTransactionFactory(
             bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         bt2 = BankTransactionFactory(
             bankaccount=self.bankaccount,
-            status=BankTransaction.STATUS_ACTIVE,
+            status=Transaction.STATUS_ACTIVE,
         )
 
         self.client.force_authenticate(self.user)
         response = self.client.patch(self.url, data={
             'ids': [bt1.pk, bt2.pk],
-            'status': BankTransaction.STATUS_ACTIVE,
+            'status': Transaction.STATUS_ACTIVE,
         })
         self.assertEqual(response.status_code, 200)
         bt1.refresh_from_db()
         bt2.refresh_from_db()
-        self.assertEqual(bt1.status, BankTransaction.STATUS_ACTIVE)
-        self.assertEqual(bt2.status, BankTransaction.STATUS_ACTIVE)
+        self.assertEqual(bt1.status, Transaction.STATUS_ACTIVE)
+        self.assertEqual(bt2.status, Transaction.STATUS_ACTIVE)
 
 
 class DeleteMultipleViewTestCase(APITestCase):
@@ -2064,9 +2064,9 @@ class DeleteMultipleViewTestCase(APITestCase):
             'ids': [bt1.pk, bt2.pk],
         })
         self.assertEqual(response.status_code, 204)
-        with self.assertRaises(BankTransaction.DoesNotExist):
+        with self.assertRaises(Transaction.DoesNotExist):
             bt1.refresh_from_db()
-        with self.assertRaises(BankTransaction.DoesNotExist):
+        with self.assertRaises(Transaction.DoesNotExist):
             bt2.refresh_from_db()
 
 
@@ -2081,7 +2081,7 @@ class CalendarEventsViewTestCase(APITestCase):
         })
 
     def tearDown(self):
-        BankTransaction.objects.all().delete()
+        Transaction.objects.all().delete()
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)

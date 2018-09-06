@@ -7,8 +7,8 @@ from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
-from mymoney.api.bankaccounts.mixins import BankAccountContext
-from mymoney.api.bankaccounts.permissions import IsBankAccountOwner
+from mymoney.bankaccounts import BankAccountContext
+from mymoney.bankaccounts import IsBankAccountOwner
 from mymoney.banktransactions import BankTransaction
 from mymoney.core.utils.dates import GRANULARITY_MONTH, GRANULARITY_WEEK
 

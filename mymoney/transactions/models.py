@@ -5,12 +5,11 @@ from django.db import models, transaction
 from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
-from mymoney.api.bankaccounts.models import BankAccount
 from mymoney.banktransactiontags import BankTransactionTag
 from mymoney.core.utils.dates import GRANULARITY_MONTH, get_date_ranges
 
 
-class BankTransactionManager(models.Manager):
+class TransactionManager(models.Manager):
 
     def get_current_balance(self, bankaccount):
 
@@ -18,7 +17,7 @@ class BankTransactionManager(models.Manager):
         futur_balance = (
             self
             .filter(bankaccount=bankaccount)
-            .exclude(status=BankTransaction.STATUS_INACTIVE)
+            .exclude(status=Transaction.STATUS_INACTIVE)
             .filter(date__gt=date.today())
             .aggregate(models.Sum('amount'))
         )['amount__sum'] or 0
@@ -36,7 +35,7 @@ class BankTransactionManager(models.Manager):
             self
             .filter(bankaccount=bankaccount)
             .filter(reconciled=False)
-            .exclude(status=BankTransaction.STATUS_INACTIVE)
+            .exclude(status=Transaction.STATUS_INACTIVE)
             .aggregate(models.Sum('amount'))
         )['amount__sum'] or 0
 
@@ -55,15 +54,12 @@ class BankTransactionManager(models.Manager):
                 date__range=get_date_ranges(timezone.now(), granularity),
                 scheduled=False,
             )
-            .exclude(status=BankTransaction.STATUS_INACTIVE)
+            .exclude(status=Transaction.STATUS_INACTIVE)
             .aggregate(total=models.Sum('amount'))
         )['total'] or 0
 
 
-class AbstractBankTransaction(models.Model):
-    """
-    Abtract class for bank transactions.
-    """
+class AbstractTransaction(models.Model):
 
     STATUS_ACTIVE = 'active'
     STATUS_IGNORED = 'ignored'
@@ -90,8 +86,8 @@ class AbstractBankTransaction(models.Model):
     )
 
     label = models.CharField(max_length=255, verbose_name=_('Label'))
-    bankaccount = models.ForeignKey(
-        BankAccount,
+    account = models.ForeignKey(
+        Account,
         related_name='%(class)ss',
         on_delete=models.CASCADE,
     )
@@ -145,14 +141,14 @@ class AbstractBankTransaction(models.Model):
 
     def save(self, *args, **kwargs):
         self.currency = self.bankaccount.currency
-        super(AbstractBankTransaction, self).save(*args, **kwargs)
+        super(AbstractTransaction, self).save(*args, **kwargs)
 
 
-class BankTransaction(AbstractBankTransaction):
+class Transaction(AbstractTransaction):
 
     scheduled = models.BooleanField(default=False, editable=False)
 
-    objects = BankTransactionManager()
+    objects = TransactionManager()
 
     class Meta:
         db_table = 'banktransactions'
@@ -166,18 +162,18 @@ class BankTransaction(AbstractBankTransaction):
     def save(self, *args, **kwargs):
 
         if self.status == self.STATUS_INACTIVE:
-            super(BankTransaction, self).save(*args, **kwargs)
+            super(Transaction, self).save(*args, **kwargs)
             return
 
         amount = Decimal(self.amount)
         if self.pk is not None:
             # Deduce previous value if updated.
-            amount -= Decimal(BankTransaction.objects.get(pk=self.pk).amount)
+            amount -= Decimal(Transaction.objects.get(pk=self.pk).amount)
 
         # Update bank account balance.
         try:
             with transaction.atomic():
-                super(BankTransaction, self).save(*args, **kwargs)
+                super(Transaction, self).save(*args, **kwargs)
 
                 self.bankaccount.balance = models.F('balance') + amount
                 self.bankaccount.save(update_fields=['balance'])
@@ -188,13 +184,13 @@ class BankTransaction(AbstractBankTransaction):
     def delete(self, *args, **kwargs):
 
         if self.status == self.STATUS_INACTIVE:
-            super(BankTransaction, self).delete(*args, **kwargs)
+            super(Transaction, self).delete(*args, **kwargs)
             return
 
         # Update bank account balance.
         try:
             with transaction.atomic():
-                super(BankTransaction, self).delete(*args, **kwargs)
+                super(Transaction, self).delete(*args, **kwargs)
 
                 self.bankaccount.balance = (
                     models.F('balance') - Decimal(self.amount)

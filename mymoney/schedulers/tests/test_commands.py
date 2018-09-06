@@ -4,7 +4,7 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils.six import StringIO
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 from mymoney.banktransactions import BankTransaction
 
 from ..factories import BankTransactionSchedulerFactory

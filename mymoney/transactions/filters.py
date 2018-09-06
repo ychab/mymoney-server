@@ -5,7 +5,7 @@ from django_filters.rest_framework import DjangoFilterBackend, FilterSet
 from mymoney.banktransactiontags import BankTransactionTag
 
 from .forms import BankTransactionFilterForm
-from .models import BankTransaction
+from .models import Transaction
 
 
 class BankTransactionFilterBackend(DjangoFilterBackend):
@@ -24,7 +24,7 @@ class BankTransactionFilter(FilterSet):
         queryset=BankTransactionTag.objects.none())
 
     class Meta:
-        model = BankTransaction
+        model = Transaction
         strict = STRICTNESS.RAISE_VALIDATION_ERROR
         form = BankTransactionFilterForm
         fields = ['date', 'amount', 'status', 'reconciled', 'tag']

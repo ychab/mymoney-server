@@ -1,4 +1,4 @@
-from mymoney.api.bankaccounts.routers import BankAccountRouter
+from mymoney.bankaccounts import BankAccountRouter
 
 from .views import RatioAnalyticsViewSet, TrendTimeAnalyticsViewSet
 

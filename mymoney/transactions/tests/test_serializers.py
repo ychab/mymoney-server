@@ -8,10 +8,10 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 from rest_framework.test import APIRequestFactory
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 
 from ..factories import BankTransactionFactory
-from ..models import BankTransaction
+from ..models import Transaction
 from ..serializers import (
     BankTransactionDetailExtraSerializer, BankTransactionDetailSerializer,
     BankTransactionEventInputSerializer, BankTransactionEventOutputSerializer,
@@ -83,7 +83,7 @@ class BankTransactionDetailSerializerTestCase(TestCase):
     @override_settings(LANGUAGE_CODE='en-us')
     def test_payment_method_label_localize_en_us(self):
         banktransaction = BankTransactionFactory(
-            payment_method=BankTransaction.PAYMENT_METHOD_CASH)
+            payment_method=Transaction.PAYMENT_METHOD_CASH)
         serializer = BankTransactionDetailSerializer(banktransaction)
         self.assertEqual(
             serializer.data['payment_method_display'],
@@ -93,7 +93,7 @@ class BankTransactionDetailSerializerTestCase(TestCase):
     @override_settings(LANGUAGE_CODE='en-us')
     def test_status_label_localize_en_us(self):
         banktransaction = BankTransactionFactory(
-            status=BankTransaction.STATUS_IGNORED)
+            status=Transaction.STATUS_IGNORED)
         serializer = BankTransactionDetailSerializer(banktransaction)
         self.assertEqual(
             serializer.data['status_display'],

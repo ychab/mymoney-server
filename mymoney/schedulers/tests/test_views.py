@@ -8,7 +8,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 from mymoney.banktransactions.factories import BankTransactionFactory
 from mymoney.banktransactions import BankTransaction
 from mymoney.banktransactiontags import BankTransactionTagFactory

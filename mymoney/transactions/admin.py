@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import BankTransaction
+from .models import Transaction
 
 
 class BankTransactionAdmin(admin.ModelAdmin):
@@ -13,4 +13,4 @@ class BankTransactionAdmin(admin.ModelAdmin):
     search_fields = ['label']
 
 
-admin.site.register(BankTransaction, BankTransactionAdmin)
+admin.site.register(Transaction, BankTransactionAdmin)

@@ -2,12 +2,10 @@ from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
 
-from mymoney.banktransactiontags import BankTransactionTag
-from mymoney.banktransactiontags import \
-    BankTransactionTagTeaserOutputSerializer
-from mymoney.banktransactiontags import (
-    BankTransactionTagOwnerValidator, BankTransactionTagsOwnerValidator,
-)
+from mymoney.tags.models import Tag
+from mymoney.tags.serializers import TagTeaserOutputSerializer
+from mymoney.tags.validators import TagOwnerValidator, TagsOwnerValidator
+
 from mymoney.core.utils.dates import GRANULARITY_MONTH, GRANULARITY_WEEK
 from mymoney.core.validators import MinMaxValidator
 

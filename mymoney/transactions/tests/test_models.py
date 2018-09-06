@@ -4,12 +4,12 @@ from unittest import mock
 
 from django.test import TestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
-from mymoney.api.bankaccounts.models import BankAccount
+from mymoney.bankaccounts import BankAccountFactory
+from mymoney.bankaccounts.models import BankAccount
 from mymoney.banktransactiontags import BankTransactionTagFactory
 
 from ..factories import BankTransactionFactory
-from ..models import BankTransaction
+from ..models import Transaction
 
 
 class BankTransactionModelTestCase(TestCase):
@@ -20,7 +20,7 @@ class BankTransactionModelTestCase(TestCase):
         BankTransactionFactory(
             bankaccount=bankaccount,
             amount=Decimal('150'),
-            status=BankTransaction.STATUS_INACTIVE
+            status=Transaction.STATUS_INACTIVE
         )
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal(100))
@@ -35,7 +35,7 @@ class BankTransactionModelTestCase(TestCase):
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal('250'))
 
-        banktransaction.status = BankTransaction.STATUS_INACTIVE
+        banktransaction.status = Transaction.STATUS_INACTIVE
         banktransaction.amount = Decimal('180')
         banktransaction.save()
         bankaccount.refresh_from_db()
@@ -62,7 +62,7 @@ class BankTransactionModelTestCase(TestCase):
     def test_insert_fail(self):
         bankaccount = BankAccountFactory(balance=0)
 
-        with mock.patch.object(BankTransaction, 'save', side_effect=Exception('Bang')):
+        with mock.patch.object(Transaction, 'save', side_effect=Exception('Bang')):
             with self.assertRaises(Exception):
                 BankTransactionFactory(
                     bankaccount=bankaccount,
@@ -107,7 +107,7 @@ class BankTransactionModelTestCase(TestCase):
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal(-10))
 
-        with mock.patch.object(BankTransaction, 'save', side_effect=Exception('Bang')):
+        with mock.patch.object(Transaction, 'save', side_effect=Exception('Bang')):
             with self.assertRaises(Exception):
                 banktransaction.amount = -50
                 banktransaction.save()
@@ -121,7 +121,7 @@ class BankTransactionModelTestCase(TestCase):
         banktransaction = BankTransactionFactory(
             bankaccount=bankaccount,
             amount=Decimal('150'),
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal('100'))
@@ -155,7 +155,7 @@ class BankTransactionModelTestCase(TestCase):
             amount='-25',
         )
 
-        with mock.patch.object(BankTransaction, 'delete', side_effect=Exception('Bang')):
+        with mock.patch.object(Transaction, 'delete', side_effect=Exception('Bang')):
             with self.assertRaises(Exception):
                 banktransaction.delete()
 
@@ -174,7 +174,7 @@ class BankTransactionModelTestCase(TestCase):
             with self.assertRaises(Exception):
                 banktransaction.delete()
 
-        self.assertTrue(BankTransaction.objects.get(pk=banktransaction_pk))
+        self.assertTrue(Transaction.objects.get(pk=banktransaction_pk))
         bankaccount.refresh_from_db()
         self.assertEqual(bankaccount.balance, Decimal(25))
 
@@ -184,7 +184,7 @@ class BankTransactionManagerTestCase(TestCase):
     def test_current_balance_none(self):
         bankaccount = BankAccountFactory(balance=0)
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(bankaccount),
             0,
         )
 
@@ -200,7 +200,7 @@ class BankTransactionManagerTestCase(TestCase):
             date=datetime.date.today() - datetime.timedelta(5),
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(bankaccount),
             Decimal('-15'),
         )
 
@@ -215,10 +215,10 @@ class BankTransactionManagerTestCase(TestCase):
             bankaccount=bankaccount,
             amount=-15,
             date=datetime.date.today() - datetime.timedelta(5),
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(bankaccount),
             Decimal('-15'),
         )
 
@@ -235,7 +235,7 @@ class BankTransactionManagerTestCase(TestCase):
             date=datetime.date.today() + datetime.timedelta(5),
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(bankaccount),
             Decimal('-15'),
         )
 
@@ -257,14 +257,14 @@ class BankTransactionManagerTestCase(TestCase):
             date=datetime.date.today() - datetime.timedelta(5),
         )
         self.assertEqual(
-            BankTransaction.objects.get_current_balance(bankaccount),
+            Transaction.objects.get_current_balance(bankaccount),
             Decimal('10'),
         )
 
     def test_reconciled_balance_none(self):
         bankaccount = BankAccountFactory(balance=0)
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(bankaccount),
             0,
         )
 
@@ -280,7 +280,7 @@ class BankTransactionManagerTestCase(TestCase):
             reconciled=True,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(bankaccount),
             Decimal('-15'),
         )
 
@@ -297,7 +297,7 @@ class BankTransactionManagerTestCase(TestCase):
             reconciled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(bankaccount),
             Decimal('-15'),
         )
 
@@ -312,10 +312,10 @@ class BankTransactionManagerTestCase(TestCase):
             bankaccount=bankaccount,
             amount=-15,
             reconciled=True,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(bankaccount),
             Decimal('-15'),
         )
 
@@ -337,14 +337,14 @@ class BankTransactionManagerTestCase(TestCase):
             reconciled=True,
         )
         self.assertEqual(
-            BankTransaction.objects.get_reconciled_balance(bankaccount),
+            Transaction.objects.get_reconciled_balance(bankaccount),
             Decimal('10'),
         )
 
     def test_total_unscheduled_period_none(self):
         bankaccount = BankAccountFactory(balance=0)
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(bankaccount),
             0,
         )
 
@@ -365,7 +365,7 @@ class BankTransactionManagerTestCase(TestCase):
             scheduled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(bankaccount),
             Decimal('-15'),
         )
 
@@ -387,7 +387,7 @@ class BankTransactionManagerTestCase(TestCase):
             scheduled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(bankaccount),
             Decimal('-15'),
         )
 
@@ -409,7 +409,7 @@ class BankTransactionManagerTestCase(TestCase):
             scheduled=True,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(bankaccount),
             Decimal('-15'),
         )
 
@@ -429,10 +429,10 @@ class BankTransactionManagerTestCase(TestCase):
             date=datetime.date(2015, 10, 26),
             amount=-15,
             scheduled=False,
-            status=BankTransaction.STATUS_INACTIVE,
+            status=Transaction.STATUS_INACTIVE,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(bankaccount),
             Decimal('-15'),
         )
 
@@ -460,7 +460,7 @@ class BankTransactionManagerTestCase(TestCase):
             scheduled=False,
         )
         self.assertEqual(
-            BankTransaction.objects.get_total_unscheduled_period(bankaccount),
+            Transaction.objects.get_total_unscheduled_period(bankaccount),
             Decimal('10'),
         )
 
@@ -475,7 +475,7 @@ class RelationshipTestCase(TestCase):
 
         bankaccount.delete()
 
-        with self.assertRaises(BankTransaction.DoesNotExist):
+        with self.assertRaises(Transaction.DoesNotExist):
             banktransaction.refresh_from_db()
 
         # Should not be deleted.

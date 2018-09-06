@@ -4,11 +4,11 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
-from mymoney.api.users.factories import UserFactory
+from mymoney.accounts.models import AccountFactory
+from mymoney.core.factories import UserFactory
 
-from ..factories import BankTransactionTagFactory
-from ..models import BankTransactionTag
+from ..factories import TagFactory
+from ..models import Tag
 
 
 class ListViewTestCase(APITestCase):
@@ -16,7 +16,10 @@ class ListViewTestCase(APITestCase):
     @classmethod
     def setUpTestData(cls):
         cls.user = UserFactory()
-        cls.url = reverse('banktransactiontags:banktransactiontag-list')
+        cls.url = reverse('tags-list')
+
+    def tearDown(self):
+        Tag.objects.all().delete()
 
     def test_access_anonymous(self):
         self.client.force_authenticate(None)
@@ -37,39 +40,10 @@ class ListViewTestCase(APITestCase):
         self.assertEqual(response.data['count'], 0)
         self.assertListEqual(response.data['results'], [])
 
-    def test_not_owner(self):
-        user = UserFactory()
-        BankTransactionTagFactory()
-        self.client.force_authenticate(user)
-        response = self.client.get(self.url)
-        self.assertEqual(response.data['count'], 0)
-        self.assertListEqual(response.data['results'], [])
-
-    def test_owner(self):
-        user = UserFactory()
-        tag = BankTransactionTagFactory(owner=user)
-        self.client.force_authenticate(user)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], tag.pk)
-
-    def test_owner_by_relationship(self):
-        user1 = UserFactory()
-        user2 = UserFactory()
-        tag = BankTransactionTagFactory(owner=user2)
-        BankAccountFactory(owners=[user1, user2])
-        self.client.force_authenticate(user1)
-        response = self.client.get(self.url)
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.data['count'], 1)
-        self.assertEqual(response.data['results'][0]['id'], tag.pk)
-
     def test_order_by_name(self):
-        user = UserFactory()
-        tag1 = BankTransactionTagFactory(name='foo', owner=user)
-        tag2 = BankTransactionTagFactory(name='bar', owner=user)
-        self.client.force_authenticate(user)
+        tag1 = TagFactory(name='foo')
+        tag2 = TagFactory(name='bar')
+        self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 2)
@@ -83,11 +57,10 @@ class ListViewTestCase(APITestCase):
         size_mock.return_value = limit
         total = limit * 2 + 1
 
-        user = UserFactory()
         for i in range(0, total):
-            BankTransactionTagFactory(owner=user)
+            TagFactory()
 
-        self.client.force_authenticate(user)
+        self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(total, response.data['count'])
@@ -96,18 +69,12 @@ class ListViewTestCase(APITestCase):
         self.assertEqual(len(response.data['results']), limit)
 
     def test_serializer(self):
-        user = UserFactory(username='foo')
-        tag = BankTransactionTagFactory(owner=user)
-        self.client.force_authenticate(user)
+        tag = TagFactory()
+        self.client.force_authenticate(self.user)
         response = self.client.get(self.url)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['results'][0]['id'], tag.pk)
         self.assertEqual(response.data['results'][0]['name'], tag.name)
-        self.assertEqual(response.data['results'][0]['owner']['id'], user.pk)
-        self.assertEqual(
-            response.data['results'][0]['owner']['username'],
-            user.username,
-        )
 
 
 class CreateViewTestCase(APITestCase):
@@ -143,7 +110,7 @@ class CreateViewTestCase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={'name': 'foo'})
         self.assertEqual(response.status_code, 201)
-        tag = BankTransactionTag.objects.get(pk=response.data['id'])
+        tag = Tag.objects.get(pk=response.data['id'])
         self.assertEqual(tag.owner, self.user)
 
     def test_owner_not_editable(self):
@@ -153,14 +120,14 @@ class CreateViewTestCase(APITestCase):
             'owner': UserFactory().pk,
         })
         self.assertEqual(response.status_code, 201)
-        tag = BankTransactionTag.objects.get(pk=response.data['id'])
+        tag = Tag.objects.get(pk=response.data['id'])
         self.assertEqual(tag.owner, self.user)
 
     def test_create(self):
         self.client.force_authenticate(self.user)
         response = self.client.post(self.url, data={'name': 'foo'})
         self.assertEqual(response.status_code, 201)
-        tag = BankTransactionTag.objects.get(pk=response.data['id'])
+        tag = Tag.objects.get(pk=response.data['id'])
         self.assertEqual(tag.name, 'foo')
         self.assertEqual(tag.owner, self.user)
 
@@ -382,5 +349,5 @@ class DeleteViewTestCase(APITestCase):
         self.client.force_authenticate(self.user)
         response = self.client.delete(url)
         self.assertEqual(response.status_code, 204)
-        with self.assertRaises(BankTransactionTag.DoesNotExist):
+        with self.assertRaises(Tag.DoesNotExist):
             tag.refresh_from_db()

@@ -3,29 +3,27 @@ from collections import OrderedDict
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 
 from rest_framework import exceptions, status
-from rest_framework.decorators import list_route
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
-from mymoney.api.bankaccounts.mixins import BankAccountContext
-from mymoney.api.bankaccounts.permissions import IsBankAccountOwner
+from mymoney.bankaccounts import BankAccountContext
+from mymoney.bankaccounts import IsBankAccountOwner
 
 from .filters import BankTransactionFilter, BankTransactionFilterBackend
-from .models import BankTransaction
+from .models import Transaction
 from .serializers import (
     BankTransactionDeleteMutipleSerializer,
     BankTransactionDetailExtraSerializer, BankTransactionDetailSerializer,
-    BankTransactionEventInputSerializer, BankTransactionEventOutputSerializer,
     BankTransactionPartialUpdateMutipleSerializer, BankTransactionSerializer,
 )
 
 
 class BankTransactionViewSet(BankAccountContext, ModelViewSet):
-    model = BankTransaction
-    queryset = BankTransaction.objects.all()
+    model = Transaction
+    queryset = Transaction.objects.all()
     permission_classes = (IsBankAccountOwner, DjangoModelPermissions)
     filter_backends = (SearchFilter, BankTransactionFilterBackend, OrderingFilter,)
     search_fields = ('label',)
@@ -65,7 +63,7 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
         serializer.is_valid(raise_exception=True)
         fields = {k: v for k, v in serializer.data.items() if k not in ('ids',)}
 
-        banktransactions = BankTransaction.objects.filter(pk__in=serializer.data['ids'])
+        banktransactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
         for banktransaction in banktransactions:
             for field, value in fields.items():
                 setattr(banktransaction, field, value)
@@ -79,43 +77,11 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
 
         serializer.is_valid(raise_exception=True)
 
-        banktransactions = BankTransaction.objects.filter(pk__in=serializer.data['ids'])
+        banktransactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
         for banktransaction in banktransactions:
             banktransaction.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @list_route(['get'])
-    def calendar_events(self, request, *args, **kwargs):
-        """
-        Endpoint for Bootstrap-calendar Javascript library.
-        """
-        serializer_in = BankTransactionEventInputSerializer(data={
-            'date_from': request.query_params.get('from'),
-            'date_to': request.query_params.get('to'),
-        })
-        serializer_in.is_valid(raise_exception=True)
-
-        qs = (
-            BankTransaction.objects.filter(
-                bankaccount=self.bankaccount,
-                date__range=(
-                    serializer_in.data['date_from'],
-                    serializer_in.data['date_to'],
-                ),
-            )
-        )
-        qs = self.add_queryset_extra_fields(qs)
-        qs = qs.order_by('date', 'id')
-
-        serializer_out = BankTransactionEventOutputSerializer(
-            qs, many=True, context={'request': request})
-
-        # Bootstrap-calendar Javascript library expect this output signature.
-        return Response({
-            "success": 1,
-            "result": serializer_out.data,
-        })
 
     def add_queryset_extra_fields(self, qs):
         """
@@ -147,7 +113,7 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
                     )
                 )
             """.format(
-            table=BankTransaction._meta.db_table,
+            table=Transaction._meta.db_table,
             balance_initial=self.bankaccount.balance_initial,
         )
 
@@ -166,7 +132,7 @@ class BankTransactionViewSet(BankAccountContext, ModelViewSet):
                         bt_sub_r.id <= {table}.id
                     )
                 )""".format(
-            table=BankTransaction._meta.db_table,
+            table=Transaction._meta.db_table,
             balance_initial=self.bankaccount.balance_initial,
         )
 

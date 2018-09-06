@@ -8,17 +8,7 @@ from django.utils.translation import ugettext as _
 from dateutil.relativedelta import relativedelta
 from factory import fuzzy
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
-from mymoney.api.bankaccounts.models import BankAccount
-from mymoney.banktransactions.factories import BankTransactionFactory
-from mymoney.banktransactions import BankTransaction
-from mymoney.banktransactionschedulers.factories import \
-    BankTransactionSchedulerFactory
-from mymoney.banktransactionschedulers.models import \
-    BankTransactionScheduler
-from mymoney.banktransactiontags import BankTransactionTagFactory
-from mymoney.banktransactiontags import BankTransactionTag
-from mymoney.api.users.factories import UserFactory
+User = get_user_model()
 
 
 class Command(BaseCommand):
@@ -26,8 +16,6 @@ class Command(BaseCommand):
     Data generator for purpose only.
     """
     help = 'Generate data for purpose.'
-
-    leave_locale_alone = True
 
     def add_arguments(self, parser):
 
@@ -54,11 +42,8 @@ class Command(BaseCommand):
                     return
 
             # Deleting users only should be enough to delete all instances.
-            get_user_model().objects.all().delete()
-            BankAccount.objects.all().delete()
-            BankTransactionTag.objects.all().delete()
-            BankTransaction.objects.all().delete()
-            BankTransactionScheduler.objects.all().delete()
+            Tag.objects.all().delete()
+            Transaction.objects.all().delete()
 
             self.stdout.write('All data have been deleted.')
             return

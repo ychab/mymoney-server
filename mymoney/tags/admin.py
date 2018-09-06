@@ -1,13 +1,13 @@
 from django.contrib import admin
 
-from .models import BankTransactionTag
+from .models import Tag
 
 
-class BankTransactionTagAdmin(admin.ModelAdmin):
-    list_display = ['name', 'owner']
+class TagAdmin(admin.ModelAdmin):
+    list_display = ['name']
     list_display_links = ['name']
-    ordering = ['name', 'owner']
+    ordering = ['name']
     search_fields = ['name']
 
 
-admin.site.register(BankTransactionTag, BankTransactionTagAdmin)
+admin.site.register(Tag, TagAdmin)

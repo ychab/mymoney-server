@@ -6,7 +6,7 @@ from django.db.models import QuerySet
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 from mymoney.banktransactions import BankTransaction
 from mymoney.banktransactiontags import BankTransactionTagFactory
 

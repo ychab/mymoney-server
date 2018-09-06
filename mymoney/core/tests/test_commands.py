@@ -3,8 +3,8 @@ from django.core.management import call_command
 from django.test import TestCase
 from django.utils.six import StringIO
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
-from mymoney.api.bankaccounts.models import BankAccount
+from mymoney.bankaccounts import BankAccountFactory
+from mymoney.bankaccounts.models import BankAccount
 from mymoney.banktransactions.factories import BankTransactionFactory
 from mymoney.banktransactions import BankTransaction
 from mymoney.banktransactionschedulers.factories import \

@@ -1,0 +1,14 @@
+import factory
+from factory import fuzzy
+
+from .models import Account
+
+
+class AccountFactory(factory.DjangoModelFactory):
+
+    class Meta:
+        model = Account
+
+    label = factory.Sequence(lambda n: 'test_%d' % n)
+    balance = fuzzy.FuzzyDecimal(-10000, 10000, precision=2)
+    currency = fuzzy.FuzzyChoice(['EUR', 'USD'])

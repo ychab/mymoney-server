@@ -4,7 +4,7 @@ from django.test import TestCase
 
 from rest_framework import exceptions
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 from mymoney.api.users.factories import UserFactory
 
 from ..factories import BankTransactionFactory

@@ -2,7 +2,7 @@ from unittest import mock
 
 from django.test import TestCase
 
-from mymoney.api.bankaccounts.factories import BankAccountFactory
+from mymoney.bankaccounts import BankAccountFactory
 from mymoney.banktransactions import BankTransaction
 
 from ..factories import BankTransactionSchedulerFactory

@@ -1,50 +1,10 @@
 from .base import *
 
-SECRET_KEY = ''
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': '',
-        'USER': '',
-        'PASSWORD': '',
-        'HOST': '',
-        'PORT': '',
-    }
-}
-
-ALLOWED_HOSTS = []
-
-ADMINS = ('',)
-
-STATIC_ROOT = ''
-SERVER_EMAIL = ''
-
-##### SECURITY #####
-
-MYMONEY['ADMIN_BASE_URL'] = ''
-
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = 'DENY'
-CSRF_COOKIE_HTTPONLY = True
 
-AUTH_PASSWORD_VALIDATORS = [
-    {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    },
-    {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    },
-]
-
-# Using HTTPS is strongly encourage, even with self-signed certificate
-# CSRF_COOKIE_SECURE = True
-# SESSION_COOKIE_SECURE = True
-# SECURE_SSL_REDIRECT = True # Just in case, should be done by webserver instead
+try:
+    from .local import *  # isort:skip
+except ImportError:
+    pass  # NOQA

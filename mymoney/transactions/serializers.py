@@ -5,25 +5,24 @@ from django.template.defaultfilters import date as date_format
 from rest_framework import serializers
 from rest_framework.reverse import reverse
 
-from mymoney.api.bankaccounts.fields import CurrentBankAccountDefault
+from mymoney.bankaccounts import CurrentBankAccountDefault
 from mymoney.banktransactiontags import \
     BankTransactionTagOutputSerializer
 from mymoney.banktransactiontags import \
     BankTransactionTagOwnerValidator
-from mymoney.core.fields import TimestampMillisecond
 from mymoney.core.utils.currencies import (
     localize_signed_amount, localize_signed_amount_currency,
 )
 from mymoney.core.validators import MinMaxValidator
 
-from .models import AbstractBankTransaction, BankTransaction
+from .models import AbstractTransaction, Transaction
 from .validators import BankTransactionOwnerValidator
 
 
 class BaseBankTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = AbstractBankTransaction
+        model = AbstractTransaction
         fields = ('id', 'label', 'bankaccount', 'date', 'amount', 'currency',
                   'status', 'reconciled', 'payment_method', 'memo', 'tag')
         read_only_fields = ('bankaccount',)
@@ -36,7 +35,7 @@ class BaseBankTransactionSerializer(serializers.ModelSerializer):
 class BankTransactionSerializer(BaseBankTransactionSerializer):
 
     class Meta(BaseBankTransactionSerializer.Meta):
-        model = BankTransaction
+        model = Transaction
         fields = BaseBankTransactionSerializer.Meta.fields + ('scheduled',)
 
 
@@ -44,7 +43,7 @@ class BankTransactionDetailSerializer(serializers.ModelSerializer):
     tag = BankTransactionTagOutputSerializer()
 
     class Meta:
-        model = BankTransaction
+        model = Transaction
         fields = ('id', 'label', 'date', 'amount', 'status', 'reconciled',
                   'payment_method', 'memo', 'tag', 'scheduled')
 
@@ -91,20 +90,20 @@ class BankTransactionDetailExtraSerializer(BankTransactionDetailSerializer):
 class BankTransactionTeaserSerializer(serializers.ModelSerializer):
 
     class Meta:
-        model = BankTransaction
+        model = Transaction
         fields = ('id', 'label', 'date', 'amount', 'reconciled')
         read_only_fields = list(fields)
 
 
 class BaseBankTransactionMultipleSerializer(serializers.ModelSerializer):
     ids = serializers.PrimaryKeyRelatedField(
-        queryset=BankTransaction.objects.all(),
+        queryset=Transaction.objects.all(),
         many=True,
         allow_empty=False,
     )
 
     class Meta:
-        model = BankTransaction
+        model = Transaction
         fields = ('ids',)
         # Unfortunetly, we cannot alter dynamically queryset on related fields.
         # And validators are applied only to children (not parent many). But
