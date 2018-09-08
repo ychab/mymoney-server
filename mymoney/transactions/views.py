@@ -21,10 +21,7 @@ from .serializers import (
 
 class TransactionViewSet(ModelViewSet):
     filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter,)
-    # filter_backends = (TransactionFilterBackend, SearchFilter, OrderingFilter,)
-    # filter_class = TransactionFilter
     filterset_class = TransactionFilter
-
     search_fields = ('label',)
     ordering_fields = ('label', 'date')
     ordering = ('-date',)

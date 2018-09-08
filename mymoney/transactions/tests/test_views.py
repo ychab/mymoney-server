@@ -2,6 +2,7 @@ import datetime
 from decimal import Decimal
 from unittest import mock
 
+from django.core.exceptions import NON_FIELD_ERRORS
 from django.test import override_settings
 
 from rest_framework.pagination import PageNumberPagination
@@ -98,9 +99,11 @@ class RetrieveViewTestCase(APITestCase):
 
     @override_settings(LANGUAGE_CODE='en-us')
     def test_amount_currency_en_us(self):
-        account = AccountFactory(currency='USD')
+        self.account.currency = 'USD'
+        self.account.save()
+
         transaction = TransactionFactory(
-            account=account,
+            account=self.account,
             amount=10,
         )
         url = reverse('transaction-detail', kwargs={
@@ -113,9 +116,11 @@ class RetrieveViewTestCase(APITestCase):
 
     @override_settings(LANGUAGE_CODE='fr-fr')
     def test_amount_currency_fr_fr(self):
-        account = AccountFactory(currency='EUR')
+        self.account.currency = 'EUR'
+        self.account.save()
+
         transaction = TransactionFactory(
-            account=account,
+            account=self.account,
             amount=10,
         )
         url = reverse('transaction-detail', kwargs={
@@ -407,14 +412,16 @@ class PartialUpdateViewTestCase(APITestCase):
         self.assertEqual(self.account.balance, Decimal('10'))
 
     def test_update_amount_inactive(self):
-        account = AccountFactory(balance=0)
+        self.account.balance = 0
+        self.account.save()
+
         transaction = TransactionFactory(
-            account=account,
+            account=self.account,
             amount='10',
             status=Transaction.STATUS_ACTIVE,
         )
-        account.refresh_from_db()
-        self.assertEqual(account.balance, Decimal('10'))
+        self.account.refresh_from_db()
+        self.assertEqual(self.account.balance, Decimal('10'))
 
         url = reverse('transaction-detail', kwargs={
             'pk': transaction.pk,
@@ -429,8 +436,8 @@ class PartialUpdateViewTestCase(APITestCase):
         transaction = Transaction.objects.get(pk=response.data['id'])
         self.assertEqual(transaction.amount, Decimal('20'))
 
-        account.refresh_from_db()
-        self.assertEqual(account.balance, Decimal('10'))
+        self.account.refresh_from_db()
+        self.assertEqual(self.account.balance, Decimal('10'))
 
     def test_update_reconciled(self):
         transaction = TransactionFactory(
@@ -693,7 +700,7 @@ class ListViewTestCase(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'date_0': datetime.date(2015, 10, 26),
+            'date_after': datetime.date(2015, 10, 26),
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 2)
@@ -718,7 +725,7 @@ class ListViewTestCase(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'date_1': datetime.date(2015, 10, 26),
+            'date_before': datetime.date(2015, 10, 26),
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 2)
@@ -743,8 +750,8 @@ class ListViewTestCase(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'date_0': datetime.date(2015, 10, 26),
-            'date_1': datetime.date(2015, 10, 27),
+            'date_after': datetime.date(2015, 10, 26),
+            'date_before': datetime.date(2015, 10, 27),
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 2)
@@ -756,7 +763,7 @@ class ListViewTestCase(APITestCase):
     def test_filter_date_invalid(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'date_0': 'foo',
+            'date_after': 'foo',
         })
         self.assertEqual(response.status_code, 400)
         self.assertIn('date', response.data)
@@ -767,11 +774,11 @@ class ListViewTestCase(APITestCase):
         """
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'date_0': datetime.date(2015, 10, 26),
-            'date_1': datetime.date(2015, 10, 25),
+            'date_after': datetime.date(2015, 10, 26),
+            'date_before': datetime.date(2015, 10, 25),
         })
         self.assertEqual(response.status_code, 400)
-        self.assertIn(api_settings.NON_FIELD_ERRORS_KEY, response.data)
+        self.assertIn(NON_FIELD_ERRORS, response.data)
 
     def test_filter_amount_min(self):
         bt = TransactionFactory(
@@ -785,7 +792,7 @@ class ListViewTestCase(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'amount_0': 15,
+            'amount_min': 15,
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 1)
@@ -803,7 +810,7 @@ class ListViewTestCase(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'amount_1': 15,
+            'amount_max': 15,
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 1)
@@ -829,8 +836,8 @@ class ListViewTestCase(APITestCase):
 
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'amount_0': 10,
-            'amount_1': 25,
+            'amount_min': 10,
+            'amount_max': 25,
         })
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data['count'], 2)
@@ -842,7 +849,7 @@ class ListViewTestCase(APITestCase):
     def test_filter_amount_invalid(self):
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'amount_0': 'foo',
+            'amount_min': 'foo',
         })
         self.assertEqual(response.status_code, 400)
         self.assertIn('amount', response.data)
@@ -853,11 +860,11 @@ class ListViewTestCase(APITestCase):
         """
         self.client.force_authenticate(self.user)
         response = self.client.get(self.url, data={
-            'amount_0': 20,
-            'amount_1': 10,
+            'amount_min': 20,
+            'amount_max': 10,
         })
         self.assertEqual(response.status_code, 400)
-        self.assertIn(api_settings.NON_FIELD_ERRORS_KEY, response.data)
+        self.assertIn(NON_FIELD_ERRORS, response.data)
 
     def test_filter_status(self):
         bt1 = TransactionFactory(

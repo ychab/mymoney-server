@@ -6,6 +6,7 @@ from mymoney.core.utils import (
     get_default_account, localize_signed_amount,
     localize_signed_amount_currency,
 )
+from mymoney.tags.serializers import TagSerializer
 
 from .models import AbstractTransaction, Transaction
 
@@ -32,6 +33,7 @@ class TransactionSerializer(BaseTransactionSerializer):
 
 
 class TransactionDetailSerializer(TransactionSerializer):
+    tag = TagSerializer()
 
     class Meta(TransactionSerializer.Meta):
         model = Transaction
