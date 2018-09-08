@@ -1,20 +1,16 @@
 from collections import OrderedDict
 
-from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
-
-from rest_framework import exceptions, status
-from rest_framework.decorators import list_route, action
+from rest_framework import status
+from rest_framework.decorators import action
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
-from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
 from .models import Transaction
 from .serializers import (
-    TransactionDeleteMutipleSerializer,
-    BankTransactionDetailExtraSerializer, BankTransactionDetailSerializer,
-    TransactionPartialUpdateMutipleSerializer, TransactionSerializer,
+    TransactionDeleteMutipleSerializer, TransactionDetailSerializer,
+    TransactionListSerializer, TransactionPartialUpdateMutipleSerializer,
+    TransactionSerializer,
 )
 
 
@@ -31,6 +27,15 @@ class TransactionViewSet(ModelViewSet):
         elif self.action == 'retrieve':
             return TransactionDetailSerializer
         return TransactionSerializer
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.filter_queryset(self.get_queryset())
+        queryset = queryset.order_by(*(queryset.query.order_by + ['-id']))
+        queryset = self._add_queryset_extra_fields(queryset)
+
+        page = self.paginate_queryset(queryset)
+        serializer = self.get_serializer(page, many=True)
+        return self.get_paginated_response(serializer.data)
 
     @action(methods=['patch'], detail=False, url_path='partial-update-multiple')
     def partial_update_multiple(self, request, *args, **kwargs):
@@ -64,7 +69,7 @@ class TransactionViewSet(ModelViewSet):
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def add_queryset_extra_fields(self, qs):
+    def _add_queryset_extra_fields(self, qs):
         """
         Add extra fields to the queryset.
         By using SQL and not Python, we could alter order_by and sort without
@@ -95,7 +100,7 @@ class TransactionViewSet(ModelViewSet):
                 )
             """.format(
             table=Transaction._meta.db_table,
-            balance_initial=self.bankaccount.balance_initial,
+            balance_initial=self.account.balance_initial,
         )
 
         reconciled_balance_subquery = """
@@ -114,7 +119,7 @@ class TransactionViewSet(ModelViewSet):
                     )
                 )""".format(
             table=Transaction._meta.db_table,
-            balance_initial=self.bankaccount.balance_initial,
+            balance_initial=self.account.balance_initial,
         )
 
         return qs.extra(
@@ -122,5 +127,5 @@ class TransactionViewSet(ModelViewSet):
                 ('balance_total', total_balance_subquery),
                 ('balance_reconciled', reconciled_balance_subquery),
             ]),
-            select_params=(self.bankaccount.pk, self.bankaccount.pk)
+            select_params=(self.account.pk, self.account.pk)
         )

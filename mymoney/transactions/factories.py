@@ -26,3 +26,5 @@ class TransactionFactory(AbstractTransactionFactory):
 
     class Meta:
         model = Transaction
+
+    scheduled = False

@@ -48,7 +48,7 @@ class TransactionManager(models.Manager):
         return (
             self
             .filter(
-                bankaccount=account,
+                account=account,
                 date__range=get_date_ranges(timezone.now(), granularity),
                 scheduled=False,
             )

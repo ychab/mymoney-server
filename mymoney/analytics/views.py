@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 
 from mymoney.transactions.models import Transaction
-from mymoney.transactions.serializers import BankTransactionTeaserSerializer
+from mymoney.transactions.serializers import TransactionTeaserSerializer
 
 from .serializers import (
     RatioInputSerializer, RatioOutputSerializer, RatioSummaryInputSerializer,
@@ -66,7 +66,7 @@ class RatioAnalyticsViewSet(APIView):
             total += banktransaction.amount
 
         return Response({
-            'results': BankTransactionTeaserSerializer(instances, many=True).data,
+            'results': TransactionTeaserSerializer(instances, many=True).data,
             'total': total,
         })
 
