@@ -2,16 +2,15 @@ from django.template.defaultfilters import date as date_format
 
 from rest_framework import serializers
 
-from mymoney.core.utils.currencies import (
-    localize_signed_amount, localize_signed_amount_currency,
+from mymoney.core.utils import (
+    get_default_account, localize_signed_amount,
+    localize_signed_amount_currency,
 )
-from mymoney.tags.serializers import TagSerializer
 
 from .models import AbstractTransaction, Transaction
 
 
 class BaseTransactionSerializer(serializers.ModelSerializer):
-    tag = TagSerializer()
 
     class Meta:
         model = AbstractTransaction
@@ -19,6 +18,10 @@ class BaseTransactionSerializer(serializers.ModelSerializer):
             'id', 'label', 'date', 'amount', 'currency', 'status', 'reconciled',
             'payment_method', 'memo', 'tag',
         )
+
+    def save(self, **kwargs):
+        kwargs['account'] = get_default_account()
+        super().save(**kwargs)
 
 
 class TransactionSerializer(BaseTransactionSerializer):
@@ -71,14 +74,6 @@ class TransactionListSerializer(TransactionDetailSerializer):
         return ret
 
 
-class TransactionTeaserSerializer(serializers.ModelSerializer):
-
-    class Meta:
-        model = Transaction
-        fields = ('id', 'label', 'date', 'amount', 'reconciled')
-        read_only_fields = list(fields)
-
-
 class BaseTransactionMultipleSerializer(serializers.ModelSerializer):
     ids = serializers.PrimaryKeyRelatedField(
         queryset=Transaction.objects.all(),
@@ -98,3 +93,11 @@ class TransactionPartialUpdateMutipleSerializer(BaseTransactionMultipleSerialize
 
 class TransactionDeleteMutipleSerializer(BaseTransactionMultipleSerializer):
     pass
+
+
+class TransactionTeaserSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Transaction
+        fields = ('id', 'label', 'date', 'amount', 'reconciled')
+        read_only_fields = list(fields)

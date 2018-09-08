@@ -6,6 +6,11 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
+from django_filters.rest_framework import DjangoFilterBackend
+
+from mymoney.core.utils import get_default_account
+from mymoney.transactions.filters import TransactionFilter
+
 from .models import Transaction
 from .serializers import (
     TransactionDeleteMutipleSerializer, TransactionDetailSerializer,
@@ -15,11 +20,17 @@ from .serializers import (
 
 
 class TransactionViewSet(ModelViewSet):
-    queryset = Transaction.objects.all()
-    filter_backends = (SearchFilter, OrderingFilter,)
+    filter_backends = (DjangoFilterBackend, SearchFilter, OrderingFilter,)
+    # filter_backends = (TransactionFilterBackend, SearchFilter, OrderingFilter,)
+    # filter_class = TransactionFilter
+    filterset_class = TransactionFilter
+
     search_fields = ('label',)
     ordering_fields = ('label', 'date')
     ordering = ('-date',)
+
+    def get_queryset(self):
+        return Transaction.objects.filter(account=get_default_account())
 
     def get_serializer_class(self):
         if self.action == 'list':
@@ -30,7 +41,7 @@ class TransactionViewSet(ModelViewSet):
 
     def list(self, request, *args, **kwargs):
         queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.order_by(*(queryset.query.order_by + ['-id']))
+        queryset = queryset.order_by(*(queryset.query.order_by + ('-id',)))
         queryset = self._add_queryset_extra_fields(queryset)
 
         page = self.paginate_queryset(queryset)
@@ -55,7 +66,7 @@ class TransactionViewSet(ModelViewSet):
 
         return Response()
 
-    @action(methods=['post'], detail=False, url_path='delete-multiple')
+    @action(methods=['delete'], detail=False, url_path='delete-multiple')
     def delete_multiple(self, request, *args, **kwargs):
         serializer = TransactionDeleteMutipleSerializer(
             data=request.data,
@@ -79,6 +90,8 @@ class TransactionViewSet(ModelViewSet):
         - total_balance
         - reconciled_balance
         """
+        account = get_default_account()
+
         # Unfortunetly, we cannot get it by doing the opposite (i.e :
         # total balance - SUM(futur bt) because with postgreSQL at least,
         # the last dated bank transaction would give None :
@@ -86,10 +99,10 @@ class TransactionViewSet(ModelViewSet):
         # It could be usefull because most of the time, we are seing the
         # latest bank transactions, not the first.
         total_balance_subquery = """
-            SELECT SUM(bt_sub.amount) + {balance_initial}
+            SELECT SUM(bt_sub.amount)
             FROM {table} AS bt_sub
             WHERE
-                bt_sub.bankaccount_id = %s
+                bt_sub.account_id = %s
                 AND (
                     bt_sub.date < {table}.date
                     OR (
@@ -100,14 +113,13 @@ class TransactionViewSet(ModelViewSet):
                 )
             """.format(
             table=Transaction._meta.db_table,
-            balance_initial=self.account.balance_initial,
         )
 
         reconciled_balance_subquery = """
-            SELECT SUM(bt_sub_r.amount) + {balance_initial}
+            SELECT SUM(bt_sub_r.amount)
             FROM {table} AS bt_sub_r
             WHERE
-                bt_sub_r.bankaccount_id = %s
+                bt_sub_r.account_id = %s
                 AND
                 bt_sub_r.reconciled is True
                 AND (
@@ -119,7 +131,6 @@ class TransactionViewSet(ModelViewSet):
                     )
                 )""".format(
             table=Transaction._meta.db_table,
-            balance_initial=self.account.balance_initial,
         )
 
         return qs.extra(
@@ -127,5 +138,5 @@ class TransactionViewSet(ModelViewSet):
                 ('balance_total', total_balance_subquery),
                 ('balance_reconciled', reconciled_balance_subquery),
             ]),
-            select_params=(self.account.pk, self.account.pk)
+            select_params=(account.pk, account.pk)
         )

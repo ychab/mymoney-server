@@ -16,10 +16,10 @@ from mymoney.transactions.views import TransactionViewSet
 
 
 router = DefaultRouter()
-router.register(r'transactions', TransactionViewSet, base_name='transaction')
-router.register(r'tags', TagViewSet, base_name='tag')
-# router.register(r'schedulers', BankTransactionSchedulerViewSet, base_name='scheduler')
 # router.register(r'analytics', RatioAnalyticsViewSet, base_name='analytic')
+# router.register(r'schedulers', BankTransactionSchedulerViewSet, base_name='scheduler')
+router.register(r'tags', TagViewSet, base_name='tag')
+router.register(r'transactions', TransactionViewSet, base_name='transaction')
 
 api_urls = router.urls
 api_urls += [
