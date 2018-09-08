@@ -40,7 +40,7 @@ INSTALLED_APPS = (
     'mymoney.tags',
     'mymoney.accounts',
     'mymoney.transactions',
-    # 'mymoney.schedulers',
+    'mymoney.schedulers',
     # 'mymoney.analytics',
 )
 

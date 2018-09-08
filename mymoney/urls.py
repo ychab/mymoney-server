@@ -10,14 +10,14 @@ from rest_framework_swagger.views import get_swagger_view
 
 # from mymoney.analytics.views import RatioAnalyticsViewSet
 # from mymoney.core.views import ConfigAPIView
-# from mymoney.schedulers.views import BankTransactionSchedulerViewSet
+from mymoney.schedulers.views import SchedulerViewSet
 from mymoney.tags.views import TagViewSet
 from mymoney.transactions.views import TransactionViewSet
 
 
 router = DefaultRouter()
 # router.register(r'analytics', RatioAnalyticsViewSet, base_name='analytic')
-# router.register(r'schedulers', BankTransactionSchedulerViewSet, base_name='scheduler')
+router.register(r'schedulers', SchedulerViewSet, base_name='scheduler')
 router.register(r'tags', TagViewSet, base_name='tag')
 router.register(r'transactions', TransactionViewSet, base_name='transaction')
 

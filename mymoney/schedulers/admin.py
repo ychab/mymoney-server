@@ -1,10 +1,11 @@
 from django.contrib import admin
 
-from .models import BankTransactionScheduler
+from .models import Scheduler
 
 
-class BankTransactionSchedulerAdmin(admin.ModelAdmin):
-    list_display = ['label', 'bankaccount', 'date', 'status', 'amount',
+@admin.register(Scheduler)
+class SchedulerAdmin(admin.ModelAdmin):
+    list_display = ['label', 'account', 'date', 'status', 'amount',
                     'reconciled', 'payment_method', 'type',
                     'recurrence', 'last_action', 'state']
     list_display_links = ['label']
@@ -12,6 +13,3 @@ class BankTransactionSchedulerAdmin(admin.ModelAdmin):
     ordering = ['-last_action']
     date_hierarchy = 'last_action'
     search_fields = ['label']
-
-
-admin.site.register(BankTransactionScheduler, BankTransactionSchedulerAdmin)

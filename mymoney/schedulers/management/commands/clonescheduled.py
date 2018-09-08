@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 
-from ...models import BankTransactionScheduler
+from ...models import Scheduler
 
 
 class Command(BaseCommand):
@@ -16,8 +16,8 @@ class Command(BaseCommand):
 
         # Sort by date instead of last action because last action could be NULL
         # and postgreSQL sort NULL value as latest.
-        qs = (BankTransactionScheduler.objects
-              .get_awaiting_banktransactions()
+        qs = (Scheduler.objects
+              .get_awaiting_transactions()
               .order_by('date')
               [:options['limit']])
 

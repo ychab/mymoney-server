@@ -1,36 +1,29 @@
 from rest_framework import serializers
 
-from mymoney.banktransactions import \
-    BaseBankTransactionSerializer
+from mymoney.transactions.serializers import BaseTransactionSerializer
 
-from .models import BankTransactionScheduler
+from .models import Scheduler
 
 
-class BankTransactionSchedulerSerializer(BaseBankTransactionSerializer):
+class SchedulerSerializer(BaseTransactionSerializer):
 
-    class Meta(BaseBankTransactionSerializer.Meta):
-        model = BankTransactionScheduler
-        fields = (
-            BaseBankTransactionSerializer.Meta.fields + (
-                'type', 'recurrence', 'last_action', 'state')
+    class Meta(BaseTransactionSerializer.Meta):
+        model = Scheduler
+        fields = BaseTransactionSerializer.Meta.fields + (
+            'type', 'recurrence', 'last_action', 'state',
         )
-        read_only_fields = (
-            BaseBankTransactionSerializer.Meta.read_only_fields + (
-                'reconciled', 'last_action', 'state'))
+        read_only_fields = ('reconciled', 'last_action', 'state')
 
 
-class BankTransactionSchedulerCreateSerializer(BankTransactionSchedulerSerializer):
+class SchedulerCreateSerializer(SchedulerSerializer):
     start_now = serializers.BooleanField(default=False, write_only=True)
 
-    class Meta(BankTransactionSchedulerSerializer.Meta):
-        fields = (
-            BankTransactionSchedulerSerializer.Meta.fields + ('start_now',)
-        )
+    class Meta(SchedulerSerializer.Meta):
+        fields = SchedulerSerializer.Meta.fields + ('start_now',)
 
     def create(self, validated_data):
         start_now = validated_data.pop('start_now', False)
-        instance = super(
-            BankTransactionSchedulerCreateSerializer, self).create(validated_data)
+        instance = super().create(validated_data)
 
         if start_now:
             instance.clone()

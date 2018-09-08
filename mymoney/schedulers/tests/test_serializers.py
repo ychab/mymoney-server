@@ -2,47 +2,47 @@ from unittest import mock
 
 from django.test import TestCase
 
-from mymoney.bankaccounts import BankAccountFactory
-from mymoney.banktransactions import BankTransaction
+from mymoney.accounts.factories import AccountFactory
+from mymoney.transactions.models import Transaction
 
-from ..factories import BankTransactionSchedulerFactory
-from ..models import BankTransactionScheduler
-from ..serializers import BankTransactionSchedulerCreateSerializer
+from ..factories import SchedulerFactory
+from ..models import Scheduler
+from ..serializers import SchedulerCreateSerializer
 
 
-class BankTransactionSchedulerCreateSerializerTestCase(TestCase):
+class SchedulerCreateSerializerTestCase(TestCase):
 
     @classmethod
     def setUpTestData(cls):
-        obj = BankTransactionSchedulerFactory.build()
+        obj = SchedulerFactory.build()
         cls.data = {
-            i.name: getattr(obj, i.name) for i in BankTransactionScheduler._meta.get_fields()
+            i.name: getattr(obj, i.name) for i in Scheduler._meta.get_fields()
         }
-        del cls.data['bankaccount']
-        cls.context = {'view': mock.Mock(bankaccount=BankAccountFactory())}
+        del cls.data['account']
+        cls.context = {'view': mock.Mock(account=AccountFactory())}
 
     def tearDown(self):
-        BankTransaction.objects.all().delete()
+        Transaction.objects.all().delete()
 
     def test_start_now_default(self):
         data = self.data.copy()
-        serializer = BankTransactionSchedulerCreateSerializer(data=data, context=self.context)
+        serializer = SchedulerCreateSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid())
         serializer.save()
-        self.assertEqual(BankTransaction.objects.count(), 0)
+        self.assertEqual(Transaction.objects.count(), 0)
 
     def test_dont_start_now(self):
         data = self.data.copy()
         data['start_now'] = False
-        serializer = BankTransactionSchedulerCreateSerializer(data=data, context=self.context)
+        serializer = SchedulerCreateSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid())
         serializer.save()
-        self.assertEqual(BankTransaction.objects.count(), 0)
+        self.assertEqual(Transaction.objects.count(), 0)
 
     def test_start_now(self):
         data = self.data.copy()
         data['start_now'] = True
-        serializer = BankTransactionSchedulerCreateSerializer(data=data, context=self.context)
+        serializer = SchedulerCreateSerializer(data=data, context=self.context)
         self.assertTrue(serializer.is_valid())
         serializer.save()
-        self.assertEqual(BankTransaction.objects.count(), 1)
+        self.assertEqual(Transaction.objects.count(), 1)
