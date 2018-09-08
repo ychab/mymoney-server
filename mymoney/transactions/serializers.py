@@ -6,7 +6,7 @@ from rest_framework import serializers
 from rest_framework.reverse import reverse
 
 from mymoney.bankaccounts import CurrentBankAccountDefault
-from mymoney.banktransactiontags import \
+from mymoney.tags.serializers import \
     BankTransactionTagOutputSerializer
 from mymoney.banktransactiontags import \
     BankTransactionTagOwnerValidator
@@ -19,7 +19,7 @@ from .models import AbstractTransaction, Transaction
 from .validators import BankTransactionOwnerValidator
 
 
-class BaseBankTransactionSerializer(serializers.ModelSerializer):
+class BaseTransactionSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = AbstractTransaction
@@ -32,11 +32,11 @@ class BaseBankTransactionSerializer(serializers.ModelSerializer):
         }
 
 
-class BankTransactionSerializer(BaseBankTransactionSerializer):
+class TransactionSerializer(BaseTransactionSerializer):
 
-    class Meta(BaseBankTransactionSerializer.Meta):
+    class Meta(BaseTransactionSerializer.Meta):
         model = Transaction
-        fields = BaseBankTransactionSerializer.Meta.fields + ('scheduled',)
+        fields = BaseTransactionSerializer.Meta.fields + ('scheduled',)
 
 
 class BankTransactionDetailSerializer(serializers.ModelSerializer):
@@ -95,7 +95,7 @@ class BankTransactionTeaserSerializer(serializers.ModelSerializer):
         read_only_fields = list(fields)
 
 
-class BaseBankTransactionMultipleSerializer(serializers.ModelSerializer):
+class BaseTransactionMultipleSerializer(serializers.Serializer):
     ids = serializers.PrimaryKeyRelatedField(
         queryset=Transaction.objects.all(),
         many=True,
@@ -105,19 +105,14 @@ class BaseBankTransactionMultipleSerializer(serializers.ModelSerializer):
     class Meta:
         model = Transaction
         fields = ('ids',)
-        # Unfortunetly, we cannot alter dynamically queryset on related fields.
-        # And validators are applied only to children (not parent many). But
-        # validators on children are not used, it use queryset instead...
-        validators = [BankTransactionOwnerValidator(field='ids')]
 
 
-class BankTransactionPartialUpdateMutipleSerializer(BaseBankTransactionMultipleSerializer):
-
-    class Meta(BaseBankTransactionMultipleSerializer.Meta):
+class TransactionPartialUpdateMutipleSerializer(BaseTransactionMultipleSerializer):
+    class Meta(BaseTransactionMultipleSerializer.Meta):
         fields = ('ids', 'status', 'reconciled')
 
 
-class BankTransactionDeleteMutipleSerializer(BaseBankTransactionMultipleSerializer):
+class TransactionDeleteMutipleSerializer(BaseTransactionMultipleSerializer):
     pass
 
 

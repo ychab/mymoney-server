@@ -6,7 +6,8 @@ from .serializers import TagSerializer
 
 
 class TagViewSet(ModelViewSet):
-    model = Tag
+    # model = Tag
+    queryset = Tag.objects.all()
     serializer_class = TagSerializer
     filter_backends = (filters.OrderingFilter,)
     ordering_fields = ('name',)

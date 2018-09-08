@@ -3,83 +3,64 @@ from collections import OrderedDict
 from django.core.exceptions import NON_FIELD_ERRORS, ValidationError
 
 from rest_framework import exceptions, status
+from rest_framework.decorators import list_route, action
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.permissions import DjangoModelPermissions
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.viewsets import ModelViewSet
 
-from mymoney.bankaccounts import BankAccountContext
-from mymoney.bankaccounts import IsBankAccountOwner
-
-from .filters import BankTransactionFilter, BankTransactionFilterBackend
 from .models import Transaction
 from .serializers import (
-    BankTransactionDeleteMutipleSerializer,
+    TransactionDeleteMutipleSerializer,
     BankTransactionDetailExtraSerializer, BankTransactionDetailSerializer,
-    BankTransactionPartialUpdateMutipleSerializer, BankTransactionSerializer,
+    TransactionPartialUpdateMutipleSerializer, TransactionSerializer,
 )
 
 
-class BankTransactionViewSet(BankAccountContext, ModelViewSet):
-    model = Transaction
+class TransactionViewSet(ModelViewSet):
     queryset = Transaction.objects.all()
-    permission_classes = (IsBankAccountOwner, DjangoModelPermissions)
-    filter_backends = (SearchFilter, BankTransactionFilterBackend, OrderingFilter,)
+    filter_backends = (SearchFilter, OrderingFilter,)
     search_fields = ('label',)
-    filter_class = BankTransactionFilter
     ordering_fields = ('label', 'date')
     ordering = ('-date',)
 
-    def filter_queryset(self, queryset):
-        # Convert filter form errors raised.
-        try:
-            return super(BankTransactionViewSet, self).filter_queryset(queryset)
-        except ValidationError as exc:
-            raise exceptions.ValidationError(
-                {api_settings.NON_FIELD_ERRORS_KEY if k == NON_FIELD_ERRORS else k: v
-                 for k, v in exc.message_dict.items()})
-
     def get_serializer_class(self):
         if self.action == 'list':
-            return BankTransactionDetailExtraSerializer
+            return TransactionListSerializer
         elif self.action == 'retrieve':
-            return BankTransactionDetailSerializer
-        return BankTransactionSerializer
+            return TransactionDetailSerializer
+        return TransactionSerializer
 
-    def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
-        queryset = queryset.order_by(*(queryset.query.order_by + ['-id']))
-        queryset = self.add_queryset_extra_fields(queryset)
-
-        page = self.paginate_queryset(queryset)
-        serializer = self.get_serializer(page, many=True)
-        return self.get_paginated_response(serializer.data)
-
+    @action(methods=['patch'], detail=False, url_path='partial-update-multiple')
     def partial_update_multiple(self, request, *args, **kwargs):
-        serializer = BankTransactionPartialUpdateMutipleSerializer(
-            data=request.data, context={'request': request})
-
+        serializer = TransactionPartialUpdateMutipleSerializer(
+            data=request.data,
+            context={'request': request},
+        )
         serializer.is_valid(raise_exception=True)
+
         fields = {k: v for k, v in serializer.data.items() if k not in ('ids',)}
 
-        banktransactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
-        for banktransaction in banktransactions:
+        transactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
+        for transaction in transactions:
             for field, value in fields.items():
-                setattr(banktransaction, field, value)
-            banktransaction.save(update_fields=fields.keys())
+                setattr(transaction, field, value)
+            transaction.save(update_fields=fields.keys())
 
         return Response()
 
+    @action(methods=['post'], detail=False, url_path='delete-multiple')
     def delete_multiple(self, request, *args, **kwargs):
-        serializer = BankTransactionDeleteMutipleSerializer(
-            data=request.data, context={'request': request})
-
+        serializer = TransactionDeleteMutipleSerializer(
+            data=request.data,
+            context={'request': request}
+        )
         serializer.is_valid(raise_exception=True)
 
-        banktransactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
-        for banktransaction in banktransactions:
-            banktransaction.delete()
+        transactions = Transaction.objects.filter(pk__in=serializer.data['ids'])
+        for transaction in transactions:
+            transaction.delete()
 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
