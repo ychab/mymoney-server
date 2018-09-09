@@ -15,7 +15,7 @@ source "$V_ENV_PATH"/bin/activate
 
 cd "$(dirname "$0")/.."
 
-python manage.py clonescheduled --settings=mymoney.settings.production
+python manage.py clonescheduled --settings=mymoney.settings.prod
 
 deactivate
 
