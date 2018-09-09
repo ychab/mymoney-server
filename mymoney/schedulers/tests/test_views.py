@@ -9,10 +9,10 @@ from rest_framework.reverse import reverse
 from rest_framework.test import APITestCase
 
 from mymoney.accounts.factories import AccountFactory
+from mymoney.core.factories import UserFactory
+from mymoney.tags.factories import TagFactory
 from mymoney.transactions.factories import TransactionFactory
 from mymoney.transactions.models import Transaction
-from mymoney.tags.factories import TagFactory
-from mymoney.core.factories import UserFactory
 
 from ..factories import SchedulerFactory
 from ..models import Scheduler

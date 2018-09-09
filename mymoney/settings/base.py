@@ -41,7 +41,7 @@ INSTALLED_APPS = (
     'mymoney.accounts',
     'mymoney.transactions',
     'mymoney.schedulers',
-    # 'mymoney.analytics',
+    'mymoney.analytics',
 )
 
 MIDDLEWARE = [

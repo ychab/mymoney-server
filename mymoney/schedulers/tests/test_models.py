@@ -7,8 +7,8 @@ from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from mymoney.accounts.factories import AccountFactory
-from mymoney.transactions.models import Transaction
 from mymoney.tags.factories import TagFactory
+from mymoney.transactions.models import Transaction
 
 from ..factories import SchedulerFactory
 from ..models import Scheduler

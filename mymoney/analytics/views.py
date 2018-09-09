@@ -1,10 +1,11 @@
 from django.db.models import Count, Sum
 from django.utils.functional import cached_property
 
-from rest_framework.decorators import list_route
+from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.views import APIView
+from rest_framework.viewsets import GenericViewSet
 
+from mymoney.core.utils import get_default_account
 from mymoney.transactions.models import Transaction
 from mymoney.transactions.serializers import TransactionTeaserSerializer
 
@@ -13,11 +14,12 @@ from .serializers import (
 )
 
 
-class RatioAnalyticsViewSet(APIView):
+class RatioAnalyticsViewSet(GenericViewSet):
 
     def __init__(self, *args, **kwargs):
-        super(RatioAnalyticsViewSet, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.filters = []
+        self.account = get_default_account()
 
     def list(self, request, *args, **kwargs):
         serializer = RatioInputSerializer(
@@ -44,7 +46,7 @@ class RatioAnalyticsViewSet(APIView):
             'total': total,
         })
 
-    @list_route(['get'])
+    @action(methods=['get'], detail=False)
     def summary(self, request, *args, **kwargs):
         serializer = RatioSummaryInputSerializer(
             data=request.query_params, context={'request': request})
@@ -61,9 +63,9 @@ class RatioAnalyticsViewSet(APIView):
         qs = qs.order_by('date', 'id')
 
         instances, total = [], 0
-        for banktransaction in qs:
-            instances.append(banktransaction)
-            total += banktransaction.amount
+        for transaction in qs:
+            instances.append(transaction)
+            total += transaction.amount
 
         return Response({
             'results': TransactionTeaserSerializer(instances, many=True).data,
@@ -74,7 +76,7 @@ class RatioAnalyticsViewSet(APIView):
     def base_queryset(self):
 
         qs = Transaction.objects.filter(
-            bankaccount=self.bankaccount,
+            account=self.account,
             status=Transaction.STATUS_ACTIVE,
             date__range=(self.filters['date_start'], self.filters['date_end']),
         )

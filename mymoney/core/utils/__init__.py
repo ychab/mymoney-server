@@ -1,5 +1,5 @@
-from .currencies import *
-from .dates import *
+from .currencies import *  # NOQA
+from .dates import *  # NOQA
 
 
 def get_default_account():

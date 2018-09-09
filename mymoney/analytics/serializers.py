@@ -2,12 +2,9 @@ from django.utils.translation import ugettext_lazy as _
 
 from rest_framework import serializers
 
-from mymoney.tags.models import Tag
-from mymoney.tags.serializers import TagTeaserOutputSerializer
-from mymoney.tags.validators import TagOwnerValidator, TagsOwnerValidator
-
-from mymoney.core.utils.dates import GRANULARITY_MONTH, GRANULARITY_WEEK
 from mymoney.core.validators import MinMaxValidator
+from mymoney.tags.models import Tag
+from mymoney.tags.serializers import TagSerializer
 
 
 class BaseRatioSerializer(serializers.Serializer):
@@ -39,7 +36,7 @@ class BaseRatioSerializer(serializers.Serializer):
 class RatioInputSerializer(BaseRatioSerializer):
 
     tags = serializers.PrimaryKeyRelatedField(
-        queryset=BankTransactionTag.objects.all(),
+        queryset=Tag.objects.all(),
         required=False,
         many=True,
         default=[],
@@ -57,7 +54,6 @@ class RatioInputSerializer(BaseRatioSerializer):
 
     class Meta(BaseRatioSerializer.Meta):
         validators = BaseRatioSerializer.Meta.validators + [
-            BankTransactionTagsOwnerValidator(field='tags'),
             MinMaxValidator('sum_min', 'sum_max'),
         ]
 
@@ -66,7 +62,7 @@ class RatioListSerializer(serializers.ListSerializer):
 
     def to_representation(self, data):
         ids = [i['tag'] for i in data if i != 0]
-        tags = BankTransactionTag.objects.in_bulk(ids)
+        tags = Tag.objects.in_bulk(ids)
         for row in data:
             row['tag'] = tags[row['tag']] if row['tag'] in tags else None
 
@@ -74,7 +70,7 @@ class RatioListSerializer(serializers.ListSerializer):
 
 
 class RatioOutputSerializer(serializers.Serializer):
-    tag = BankTransactionTagTeaserOutputSerializer()
+    tag = TagSerializer()
     sum = serializers.DecimalField(max_digits=5, decimal_places=2)
     count = serializers.IntegerField(min_value=0)
     percentage = serializers.DecimalField(max_digits=5, decimal_places=2)
@@ -85,30 +81,6 @@ class RatioOutputSerializer(serializers.Serializer):
 
 class RatioSummaryInputSerializer(BaseRatioSerializer):
     tag = serializers.PrimaryKeyRelatedField(
-        queryset=BankTransactionTag.objects.all(),
-        validators=[BankTransactionTagOwnerValidator()],
+        queryset=Tag.objects.all(),
         allow_null=True,
     )
-
-
-class TrendTimeInputSerializer(serializers.Serializer):
-
-    GRANULARITY_CHOICES = (
-        (GRANULARITY_WEEK, _('Week')),
-        (GRANULARITY_MONTH, _('Month')),
-    )
-
-    granularity = serializers.ChoiceField(
-        choices=GRANULARITY_CHOICES,
-        default=GRANULARITY_MONTH,
-    )
-    date = serializers.DateField()
-    reconciled = serializers.NullBooleanField(required=False)
-
-
-class TrendTimeOuputSerializer(serializers.Serializer):
-    date = serializers.DateField()
-    count = serializers.IntegerField(min_value=0)
-    balance = serializers.DecimalField(max_digits=10, decimal_places=2)
-    delta = serializers.DecimalField(max_digits=10, decimal_places=2)
-    percentage = serializers.DecimalField(max_digits=8, decimal_places=2)

@@ -8,10 +8,7 @@ from mymoney.core.utils.dates import GRANULARITY_MONTH, GRANULARITY_WEEK
 from mymoney.transactions.models import Transaction
 
 from .models import Scheduler
-from .serializers import (
-    SchedulerCreateSerializer,
-    SchedulerSerializer,
-)
+from .serializers import SchedulerCreateSerializer, SchedulerSerializer
 
 
 class SchedulerViewSet(ModelViewSet):
